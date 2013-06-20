@@ -14,175 +14,239 @@ import (
 	"io"
 )
 
-// A value to avoid allocating for statically-known empty ropes.
-var emptyRope = &Rope{}
+type (
+	node interface {
+		io.WriterTo
+		dropPrefix(start int64) node
+		dropPostfix(end int64) node
 
-// The actual Rope type
+		// A rope without subtrees is at depth 0, others at
+		// max(left.depth,right.depth) + 1
+		depth() int
+		length() int64
+	}
+
+	concat struct {
+		left, right node  // Subtrees. Neither may be nil or length zero.
+		treedepth   int   // Depth of tree.
+		leftLen     int64 // Length of left subtree.
+	}
+
+	leaf string
+)
+
+// A value to avoid allocating for statically-known empty ropes.
+var emptyNode = leaf("")
+var emptyRope = Rope{emptyNode}
+
+// Rope represents a non-contiguous string.
+// The zero value is an empty rope.
 type Rope struct {
-	direct      string // The text in this node
-	left, right *Rope  // The left and right subtrees
-	leftLen     int64  // The length of the left subtree (optimization)
-	depth       int    // A rope without subtrees is at depth 0, others at max(left.depth,right.depth) + 1
+	node // The root node of this rope. May be nil.
 }
 
 // New returns a Rope representing a given string.
-func New(arg string) *Rope {
-	return &Rope{direct: arg}
+func New(arg string) Rope {
+	return Rope{
+		node: leaf(arg),
+	}
 }
 
 // Materializes the Rope as a string value.
-func (r *Rope) String() string {
+func (r Rope) String() string {
+	if r.node == nil {
+		return ""
+	}
 	// In the trivial case, avoid allocation
-	if r.left == nil && r.right == nil {
-		return r.direct
+	if l, ok := r.node.(leaf); ok {
+		return string(l)
 	}
 	// The rope is not contiguous.
 	return string(r.Bytes())
 }
 
 // Bytes returns the string represented by this Rope as a []byte.
-func (r *Rope) Bytes() []byte {
+func (r Rope) Bytes() []byte {
+	if r.node == nil {
+		return nil
+	}
 	buf := bytes.NewBuffer(make([]byte, 0, r.Len()))
 	r.WriteTo(buf)
 	return buf.Bytes()
 }
 
 // Writes the value of this Rope to the writer.
-func (r *Rope) WriteTo(w io.Writer) (n int64, err error) {
-	var m int64
-	if r.left != nil {
-		m, err = r.left.WriteTo(w)
-		n += m
-		if err != nil {
-			return
+func (r Rope) WriteTo(w io.Writer) (n int64, err error) {
+	if r.node == nil {
+		return 0, nil // Nothing to do
+	}
+	return r.node.WriteTo(w)
+}
+
+func (c concat) WriteTo(w io.Writer) (n int64, err error) {
+	m, e := c.left.WriteTo(w)
+	n += m
+	if e != nil {
+		return n, e
+	}
+
+	m, e = c.right.WriteTo(w)
+	n += m
+	return n, e
+}
+
+func (l leaf) WriteTo(w io.Writer) (n int64, err error) {
+	n1, err := io.WriteString(w, string(l))
+	return int64(n1), err
+}
+
+func (c concat) depth() int { return c.treedepth }
+func (l leaf) depth() int   { return 0 }
+
+func (c concat) length() int64 { return c.leftLen + c.right.length() }
+func (l leaf) length() int64   { return int64(len(l)) }
+
+// Len returns the length of the string represented by the Rope.
+func (r Rope) Len() int64 {
+	if r.node == nil {
+		return 0
+	}
+	return r.node.length()
+}
+
+// Helper function: returns the concatenation of the arguments.
+func conc(lhs, rhs node) node {
+	if lhs == emptyNode {
+		return rhs
+	}
+	if rhs == emptyNode {
+		return lhs
+	}
+
+	depth := lhs.depth()
+	if d := rhs.depth(); d > depth {
+		depth = d
+	}
+
+	return concat{
+		left:      lhs,
+		right:     rhs,
+		treedepth: depth + 1,
+		leftLen:   lhs.length(),
+	}
+}
+
+func concMany(first node, others ...node) node {
+	if len(others) == 0 {
+		return first
+	}
+	split := len(others) / 2
+	lhs := concMany(first, others[:split]...)
+	rhs := concMany(others[split], others[split+1:]...)
+	return conc(lhs, rhs)
+}
+
+// Concat returns the Rope representing the receiver concatenated
+// with the argument.
+func (r Rope) Concat(rhs ...Rope) Rope {
+	// Handle nil-node receiver
+	for r.node == nil && len(rhs) > 0 {
+		r = rhs[0]
+		rhs = rhs[1:]
+	}
+	if len(rhs) == 0 {
+		return r
+	}
+
+	list := make([]node, 0, len(rhs))
+	for _, item := range rhs {
+		if item.node != nil {
+			list = append(list, item.node)
 		}
 	}
-	m_i, err := w.Write([]byte(r.direct))
-	n += int64(m_i)
-	if err != nil {
-		return
-	}
-	if r.right != nil {
-		m, err = r.right.WriteTo(w)
-		n += m
-		if err != nil {
-			return
+	node := concMany(r, list...)
+	return Rope{node: node}
+}
+
+func maxdepth(nodes ...node) (depth int) {
+	for _, n := range nodes {
+		if d := n.depth(); d > depth {
+			depth = d
 		}
 	}
 	return
 }
 
-// Len returns the length of the string represented by the Rope.
-func (r *Rope) Len() int64 {
-	length := r.leftLen + int64(len(r.direct))
-	if r != nil {
-		length += r.right.Len()
-	}
-	return length
-}
-
-// Helper function: returns lhs + direct + rhs.
-func rope(lhs *Rope, direct string, rhs *Rope) *Rope {
-	if lhs.right != nil && rhs.left != nil {
-		return &Rope{
-			left:    lhs,
-			direct:  direct,
-			right:   rhs,
-			leftLen: lhs.Len(), // FIXME: This is known at several callsites
-		}
-	}
-	if len(direct) == 0 {
-		switch {
-		case lhs.right == nil:
-			// Copy the left-hand side, hang the rhs under it.
-			return &Rope{
-				left:    lhs.left,
-				direct:  lhs.direct,
-				right:   rhs,
-				leftLen: lhs.leftLen,
-			}
-		case rhs.left == nil:
-			// Copy the right-hand side, hang the lhs under it.
-			return &Rope{
-				left:    lhs,
-				direct:  rhs.direct,
-				right:   rhs.right,
-				leftLen: lhs.Len(),
-			}
-		}
-	}
-	// Construct a new node from scratch.
-	return &Rope{
-		left:    lhs,
-		right:   rhs,
-		leftLen: lhs.Len(),
+func (c concat) dropPrefix(start int64) node {
+	switch {
+	case start <= 0:
+		return c
+	case start < c.leftLen:
+		return conc(c.left.dropPrefix(start), c.right)
+	default: //start >= c.leftLen
+		return c.right.dropPrefix(start - c.leftLen)
 	}
 }
 
-// Concat returns the Rope representing the receiver concatenated
-// with the argument.
-func (r *Rope) Concat(rhs *Rope) *Rope {
-	return rope(lhs, "", rhs)
+func (l leaf) dropPrefix(start int64) node {
+	switch {
+	case start >= int64(len(l)):
+		return emptyNode
+	case start <= 0:
+		return l
+	default: // 0 < start < len(l)
+		return l[start:]
+	}
 }
 
 // DropPrefix returns a postfix of a rope, starting at index.
 // It's analogous to str[start:].
-func (r *Rope) DropPrefix(start int64) *Rope {
-	// Does the prefix start in the left subtree?
-	if start < r.leftLen {
-		// r.left can't be nil since r.leftLen > 0
-		return rope(r.left.DropPrefix(start), r.direct, r.right)
+func (r Rope) DropPrefix(start int64) Rope {
+	if start == 0 || r.node == nil {
+		return r
 	}
-	// Ignore the left subtree
-	start -= r.leftLen
+	return Rope{
+		node: r.node.dropPrefix(start),
+	}
+}
 
-	// Does the prefix start in the direct string?
-	direct := ""
-	if start < int64(len(direct)) {
-		return rope(nil, r.direct[int(start):], r.right)
+func (c concat) dropPostfix(end int64) node {
+	switch {
+	case end <= 0:
+		return emptyNode
+	case end <= c.leftLen:
+		return c.left.dropPostfix(end)
+	default: // end > c.leftLen
+		return conc(c.left, c.right.dropPostfix(end-c.leftLen))
 	}
-	// Ignore direct string.
-	start -= int64(len(direct))
-	// If there's a right subtree, drop its prefix.
-	if r.right != nil {
-		return r.right.DropPrefix(start)
+}
+
+func (l leaf) dropPostfix(end int64) node {
+	switch {
+	case end >= int64(len(l)):
+		return l
+	case end <= 0:
+		return emptyNode
+	default:
+		return l[:end]
 	}
-	// The prefix is empty.
-	return emptyRope
 }
 
 // DropPostfix returns the prefix of a rope ending at end.
 // It's analogous to str[:end].
-func (r *Rope) DropPostfix(end int64) *Rope {
-	if end == 0 {
-		return emptyRope
+func (r Rope) DropPostfix(end int64) Rope {
+	if r.node == nil {
+		return r
 	}
-	if end <= r.leftLen {
-		// Drop everything but a prefix of r.left
-		return r.left.DropPostfix(end)
+	return Rope{
+		node: r.node.dropPrefix(end),
 	}
-	end -= r.leftLen
-	if end <= int64(len(r.direct)) {
-		// Drop a prefix of r.direct. Keep r.right.
-		return rope(
-			r.left,
-			r.direct[:int64(len(r.direct))-r.leftLen],
-			r.right,
-		)
-	}
-	end -= int64(len(r.direct))
-	if r.right != nil {
-		// Drop a postfix of r.right, keep everything else.
-		return rope(r.left, r.direct, r.right.DropPostfix(end))
-	}
-	// Asked to drop stuff beyond the end of the Rope.
-	return r
 }
 
 // Slice returns the substring of a Rope, analogous to str[start:end].
 // It is equivalent to r.DropPostfix(end).DropPrefix(start).
 //
 // If start >= end, start > r.Len() or end == 0, an empty Rope is returned.
-func (r *Rope) Slice(start, end int64) *Rope {
+func (r Rope) Slice(start, end int64) Rope {
 	return r.DropPostfix(end).DropPrefix(start)
 }
