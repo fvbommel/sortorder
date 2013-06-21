@@ -14,29 +14,20 @@ import (
 	"io"
 )
 
-type (
-	node interface {
-		io.WriterTo
-		dropPrefix(start int64) node
-		dropPostfix(end int64) node
+type node interface {
+	// A rope without subtrees is at depth 0, others at
+	// max(left.depth,right.depth) + 1
+	depth() int
+	length() int64
 
-		// A rope without subtrees is at depth 0, others at
-		// max(left.depth,right.depth) + 1
-		depth() int
-		length() int64
-	}
+	io.WriterTo
 
-	concat struct {
-		left, right node  // Subtrees. Neither may be nil or length zero.
-		treedepth   int   // Depth of tree.
-		leftLen     int64 // Length of left subtree.
-	}
-
-	leaf string
-)
+	dropPrefix(start int64) node
+	dropPostfix(end int64) node
+}
 
 // A value to avoid allocating for statically-known empty ropes.
-var emptyNode = leaf("")
+var emptyNode = node(nil)
 var emptyRope = Rope{emptyNode}
 
 // Rope represents a non-contiguous string.
@@ -47,6 +38,9 @@ type Rope struct {
 
 // New returns a Rope representing a given string.
 func New(arg string) Rope {
+	if len(arg) == 0 {
+		return emptyRope
+	}
 	return Rope{
 		node: leaf(arg),
 	}
@@ -83,57 +77,12 @@ func (r Rope) WriteTo(w io.Writer) (n int64, err error) {
 	return r.node.WriteTo(w)
 }
 
-func (c concat) WriteTo(w io.Writer) (n int64, err error) {
-	m, e := c.left.WriteTo(w)
-	n += m
-	if e != nil {
-		return n, e
-	}
-
-	m, e = c.right.WriteTo(w)
-	n += m
-	return n, e
-}
-
-func (l leaf) WriteTo(w io.Writer) (n int64, err error) {
-	n1, err := io.WriteString(w, string(l))
-	return int64(n1), err
-}
-
-func (c concat) depth() int { return c.treedepth }
-func (l leaf) depth() int   { return 0 }
-
-func (c concat) length() int64 { return c.leftLen + c.right.length() }
-func (l leaf) length() int64   { return int64(len(l)) }
-
 // Len returns the length of the string represented by the Rope.
 func (r Rope) Len() int64 {
 	if r.node == nil {
 		return 0
 	}
 	return r.node.length()
-}
-
-// Helper function: returns the concatenation of the arguments.
-func conc(lhs, rhs node) node {
-	if lhs == emptyNode {
-		return rhs
-	}
-	if rhs == emptyNode {
-		return lhs
-	}
-
-	depth := lhs.depth()
-	if d := rhs.depth(); d > depth {
-		depth = d
-	}
-
-	return concat{
-		left:      lhs,
-		right:     rhs,
-		treedepth: depth + 1,
-		leftLen:   lhs.length(),
-	}
 }
 
 func concMany(first node, others ...node) node {
@@ -168,37 +117,6 @@ func (r Rope) Concat(rhs ...Rope) Rope {
 	return Rope{node: node}
 }
 
-func maxdepth(nodes ...node) (depth int) {
-	for _, n := range nodes {
-		if d := n.depth(); d > depth {
-			depth = d
-		}
-	}
-	return
-}
-
-func (c concat) dropPrefix(start int64) node {
-	switch {
-	case start <= 0:
-		return c
-	case start < c.leftLen:
-		return conc(c.left.dropPrefix(start), c.right)
-	default: //start >= c.leftLen
-		return c.right.dropPrefix(start - c.leftLen)
-	}
-}
-
-func (l leaf) dropPrefix(start int64) node {
-	switch {
-	case start >= int64(len(l)):
-		return emptyNode
-	case start <= 0:
-		return l
-	default: // 0 < start < len(l)
-		return l[start:]
-	}
-}
-
 // DropPrefix returns a postfix of a rope, starting at index.
 // It's analogous to str[start:].
 func (r Rope) DropPrefix(start int64) Rope {
@@ -207,28 +125,6 @@ func (r Rope) DropPrefix(start int64) Rope {
 	}
 	return Rope{
 		node: r.node.dropPrefix(start),
-	}
-}
-
-func (c concat) dropPostfix(end int64) node {
-	switch {
-	case end <= 0:
-		return emptyNode
-	case end <= c.leftLen:
-		return c.left.dropPostfix(end)
-	default: // end > c.leftLen
-		return conc(c.left, c.right.dropPostfix(end-c.leftLen))
-	}
-}
-
-func (l leaf) dropPostfix(end int64) node {
-	switch {
-	case end >= int64(len(l)):
-		return l
-	case end <= 0:
-		return emptyNode
-	default:
-		return l[:end]
 	}
 }
 
