@@ -14,21 +14,29 @@ import (
 	"io"
 )
 
-type node interface {
-	// A rope without subtrees is at depth 0, others at
-	// max(left.depth,right.depth) + 1
-	depth() int
-	length() int64
+type (
+	node interface {
+		// A rope without subtrees is at depth 0, others at
+		// max(left.depth,right.depth) + 1
+		depth() depthT
+		length() int64
 
-	io.WriterTo
+		// Slice returns a slice of the node.
+		// Precondition: start < end
+		slice(start, end int64) node
 
-	dropPrefix(start int64) node
-	dropPostfix(end int64) node
-}
+		io.WriterTo
+
+		dropPrefix(start int64) node
+		dropPostfix(end int64) node
+	}
+
+	depthT byte
+)
 
 // A value to avoid allocating for statically-known empty ropes.
-var emptyNode = node(nil)
-var emptyRope = Rope{emptyNode}
+var emptyNode = leaf("")        // The canonical empty node.
+var emptyRope = Rope{emptyNode} // A Rope containing the empty node.
 
 // Rope represents a non-contiguous string.
 // The zero value is an empty rope.
@@ -92,7 +100,7 @@ func concMany(first node, others ...node) node {
 	split := len(others) / 2
 	lhs := concMany(first, others[:split]...)
 	rhs := concMany(others[split], others[split+1:]...)
-	return conc(lhs, rhs)
+	return conc(lhs, rhs, 0, 0)
 }
 
 // Concat returns the Rope representing the receiver concatenated
@@ -144,5 +152,11 @@ func (r Rope) DropPostfix(end int64) Rope {
 //
 // If start >= end, start > r.Len() or end == 0, an empty Rope is returned.
 func (r Rope) Slice(start, end int64) Rope {
+	if start < 0 {
+		start = 0
+	}
+	if start >= end {
+		return emptyRope
+	}
 	return r.DropPostfix(end).DropPrefix(start)
 }
