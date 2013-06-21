@@ -52,3 +52,7 @@ func (l leaf) dropPostfix(end int64) node {
 		return l[:end]
 	}
 }
+
+func (l leaf) walkLeaves(f func(leaf)) {
+	f(l)
+}

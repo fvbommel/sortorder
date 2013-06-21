@@ -29,6 +29,9 @@ type (
 
 		dropPrefix(start int64) node
 		dropPostfix(end int64) node
+
+		// walkLeaves calls f on each leaf of the graph in order.
+		walkLeaves(f func(leaf))
 	}
 
 	depthT byte

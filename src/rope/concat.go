@@ -136,3 +136,8 @@ func (c concat) dropPostfix(end int64) node {
 		return conc(c.left, c.right.dropPostfix(end), c.split, end)
 	}
 }
+
+func (c concat) walkLeaves(f func(leaf)) {
+	c.left.walkLeaves(f)
+	c.right.walkLeaves(f)
+}
