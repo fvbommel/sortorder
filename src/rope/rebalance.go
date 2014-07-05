@@ -5,6 +5,7 @@ import (
 	"sync"
 )
 
+// Debug enables debug output.
 var Debug = true
 
 var (
@@ -83,7 +84,7 @@ func extendFibs(N int64) {
 	}
 }
 
-// A rope is balanced if its length <= fib(depth)
+// A rope is balanced if its length <= fib(depth).
 func (r Rope) isBalanced() bool {
 	if r.node == nil || r.node == emptyNode {
 		return true
@@ -94,7 +95,7 @@ func (r Rope) isBalanced() bool {
 	return int(r.node.depth()) <= maxDepth
 }
 
-// Rebalances a rope
+// Rebalance rebalances a rope.
 func (r Rope) Rebalance() Rope {
 	len := r.Len()
 	fibs := getFibCache(len)

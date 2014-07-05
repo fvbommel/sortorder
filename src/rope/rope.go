@@ -1,4 +1,4 @@
-// Rope implements a string-like binary tree, which is a more
+// Package rope implements a string-like binary tree, which is a more
 // efficient representation for very long strings (especially when
 // many concatenations are performed).
 //
@@ -80,7 +80,7 @@ func (r Rope) Bytes() []byte {
 	return buf.Bytes()
 }
 
-// Writes the value of this Rope to the writer.
+// WriteTo writes the value of this Rope to the provided writer.
 func (r Rope) WriteTo(w io.Writer) (n int64, err error) {
 	if r.node == nil {
 		return 0, nil // Nothing to do
