@@ -5,9 +5,6 @@ import (
 	"sync"
 )
 
-// Debug enables debug output.
-var Debug = true
-
 var (
 	// A cache of Fibonacci numbers.
 	// Initialized to some initial ones to get us started.

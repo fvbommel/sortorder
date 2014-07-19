@@ -1,14 +1,14 @@
 package rope
 
 import (
+	"fmt"
 	"io"
 )
 
 // Reader is an io.Reader that reads from a Rope.
 type Reader struct {
 	stack []*concat // The stack of internal nodes whose right subtrees we need to visit.
-	cur   leaf      // The current leaf
-	pos   int       // The position in the current leaf
+	cur   leaf      // The unread part of the current leaf
 }
 
 // NewReader returns a Reader that reads from the specified Rope.
@@ -26,7 +26,6 @@ func (r *Reader) pushSubtree(n node) {
 	for {
 		if leaf, ok := n.(leaf); ok {
 			r.cur = leaf
-			r.pos = 0
 			return
 		}
 		conc := n.(*concat)
@@ -36,24 +35,38 @@ func (r *Reader) pushSubtree(n node) {
 }
 
 func (r *Reader) nextNode() {
+	last := r.stack[len(r.stack)-1]
+
 	r.stack = r.stack[:len(r.stack)-1]
-	if len(r.stack) != 0 {
-		r.pushSubtree(r.stack[len(r.stack)-1])
-	}
+
+	r.pushSubtree(last.Right)
 }
 
 // Read implements io.Reader.
 func (r *Reader) Read(p []byte) (n int, err error) {
-	for r.pos == len(r.cur) {
-		// Done reading this node.
-		r.nextNode()
+	if false && Debug {
+		defer func() {
+			fmt.Printf("Wrote %v bytes: %q (err=%v)\n", n, p[:n], err)
+			if err != nil {
+				fmt.Println()
+			}
+		}()
+	}
+	for len(r.cur) == 0 {
 		if len(r.stack) == 0 {
-			// Done.
+			// No more nodes to read.
 			return 0, io.EOF
 		}
+		// Done reading this node.
+		r.nextNode()
 	}
 
-	n = copy(p, r.cur[r.pos:])
-	r.pos += n
-	return n, nil
+	n = copy(p, r.cur)
+	r.cur = r.cur[n:]
+
+	if len(r.cur) == 0 && len(r.stack) == 0 {
+		err = io.EOF
+	}
+
+	return
 }
