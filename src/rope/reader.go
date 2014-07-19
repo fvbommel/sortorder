@@ -4,43 +4,46 @@ import (
 	"io"
 )
 
-type reader struct {
-	stack []concat // The stack of internal nodes whose right subtrees we need to visit.
-	cur   leaf     // The current leaf
-	pos   int      // The position in the current leaf
+// Reader is an io.Reader that reads from a Rope.
+type Reader struct {
+	stack []*concat // The stack of internal nodes whose right subtrees we need to visit.
+	cur   leaf      // The current leaf
+	pos   int       // The position in the current leaf
 }
 
-// NewReader returns an io.Reader that reads from the specified Rope.
-func NewReader(rope *Rope) io.Reader {
+// NewReader returns a Reader that reads from the specified Rope.
+func NewReader(rope Rope) *Reader {
 	// Put the leftmost path on the stack.
-	reader := reader{
-		stack: make([]concat, 0, rope.depth()),
+	var reader Reader
+	if rope.node != nil {
+		reader.stack = make([]*concat, 0, rope.node.depth())
+		reader.pushSubtree(rope.node)
 	}
-	reader.pushSubtree(rope.node)
 	return &reader
 }
 
-func (r *reader) pushSubtree(n node) {
+func (r *Reader) pushSubtree(n node) {
 	for {
 		if leaf, ok := n.(leaf); ok {
 			r.cur = leaf
 			r.pos = 0
 			return
 		}
-		conc := n.(concat)
-		n = conc.left
+		conc := n.(*concat)
 		r.stack = append(r.stack, conc)
+		n = conc.left
 	}
 }
 
-func (r *reader) nextNode() {
+func (r *Reader) nextNode() {
 	r.stack = r.stack[:len(r.stack)-1]
 	if len(r.stack) != 0 {
 		r.pushSubtree(r.stack[len(r.stack)-1])
 	}
 }
 
-func (r *reader) Read(p []byte) (n int, err error) {
+// Read implements io.Reader.
+func (r *Reader) Read(p []byte) (n int, err error) {
 	for r.pos == len(r.cur) {
 		// Done reading this node.
 		r.nextNode()

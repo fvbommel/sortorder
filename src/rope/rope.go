@@ -1,9 +1,8 @@
-// Package rope implements a string-like binary tree, which is a more
-// efficient representation for very long strings (especially when
-// many concatenations are performed).
+// Package rope implements a "heavy-weight string", which represents very long
+// strings more efficiently (especially when many concatenations are performed).
 //
-// Note that it may also need considerably less memory if many of its
-// substrings share common structure.
+// It may also need less memory if it contains repeated substrings, or if you
+// use several large strings that are similar to each other.
 //
 // Rope values are immutable, so each operation returns its result instead
 // of modifying the receiver. This immutability also makes them thread-safe.
@@ -14,37 +13,12 @@ import (
 	"io"
 )
 
-type (
-	node interface {
-		// A rope without subtrees is at depth 0, others at
-		// max(left.depth,right.depth) + 1
-		depth() depthT
-		length() int64
-
-		// Slice returns a slice of the node.
-		// Precondition: start < end
-		slice(start, end int64) node
-
-		io.WriterTo
-
-		dropPrefix(start int64) node
-		dropPostfix(end int64) node
-
-		// walkLeaves calls f on each leaf of the graph in order.
-		walkLeaves(f func(leaf))
-	}
-
-	depthT byte
-)
-
-// A value to avoid allocating for statically-known empty ropes.
-var emptyNode = leaf("")        // The canonical empty node.
 var emptyRope = Rope{emptyNode} // A Rope containing the empty node.
 
-// Rope represents a non-contiguous string.
+// Rope implements a non-contiguous string.
 // The zero value is an empty rope.
 type Rope struct {
-	node // The root node of this rope. May be nil.
+	node node // The root node of this rope. May be nil.
 }
 
 // New returns a Rope representing a given string.
@@ -57,7 +31,7 @@ func New(arg string) Rope {
 	}
 }
 
-// Materializes the Rope as a string value.
+// String materializes the Rope as a string value.
 func (r Rope) String() string {
 	if r.node == nil {
 		return ""
@@ -96,19 +70,8 @@ func (r Rope) Len() int64 {
 	return r.node.length()
 }
 
-func concMany(first node, others ...node) node {
-	if len(others) == 0 {
-		return first
-	}
-	split := len(others) / 2
-	lhs := concMany(first, others[:split]...)
-	rhs := concMany(others[split], others[split+1:]...)
-	return conc(lhs, rhs, 0, 0)
-}
-
-// Concat returns the Rope representing the receiver concatenated
-// with the argument.
-func (r Rope) Concat(rhs ...Rope) Rope {
+// Append returns the Rope representing the arguments appended to this rope.
+func (r Rope) Append(rhs ...Rope) Rope {
 	// Handle nil-node receiver
 	for r.node == nil && len(rhs) > 0 {
 		r = rhs[0]
@@ -124,12 +87,14 @@ func (r Rope) Concat(rhs ...Rope) Rope {
 			list = append(list, item.node)
 		}
 	}
-	node := concMany(r, list...)
+	node := concMany(r.node, list...)
 	return Rope{node: node}
 }
 
 // DropPrefix returns a postfix of a rope, starting at index.
 // It's analogous to str[start:].
+//
+// If start >= r.Len(), an empty Rope is returned.
 func (r Rope) DropPrefix(start int64) Rope {
 	if start == 0 || r.node == nil {
 		return r
@@ -141,6 +106,8 @@ func (r Rope) DropPrefix(start int64) Rope {
 
 // DropPostfix returns the prefix of a rope ending at end.
 // It's analogous to str[:end].
+//
+// If end <= 0, an empty Rope is returned.
 func (r Rope) DropPostfix(end int64) Rope {
 	if r.node == nil {
 		return r
@@ -153,13 +120,16 @@ func (r Rope) DropPostfix(end int64) Rope {
 // Slice returns the substring of a Rope, analogous to str[start:end].
 // It is equivalent to r.DropPostfix(end).DropPrefix(start).
 //
-// If start >= end, start > r.Len() or end == 0, an empty Rope is returned.
+// If start >= end, start >= r.Len() or end == 0, an empty Rope is returned.
 func (r Rope) Slice(start, end int64) Rope {
+	if r.node == nil {
+		return r
+	}
 	if start < 0 {
 		start = 0
 	}
 	if start >= end {
 		return emptyRope
 	}
-	return r.DropPostfix(end).DropPrefix(start)
+	return Rope{node: r.node.slice(start, end)}
 }

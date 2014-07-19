@@ -20,74 +20,37 @@ type (
 	rLenT uint32
 )
 
-// Helper function: returns the concatenation of the arguments.
-// If lhsLength is <= 0, it is determined automatically if needed.
-func conc(lhs, rhs node, lhsLength, rhsLength int64) node {
-	if lhs == emptyNode {
-		return rhs
-	}
-	if rhs == emptyNode {
-		return lhs
-	}
+func (c *concat) depth() depthT { return c.treedepth }
 
-	depth := lhs.depth()
-	if d := rhs.depth(); d > depth {
-		depth = d
-	}
-
-	if lhsLength <= 0 {
-		lhsLength = lhs.length()
-	}
-	if rhsLength <= 0 {
-		rhsLength = rhs.length()
-	}
-	if rhsLength > int64(^rLenT(0)) {
-		// Out of range
-		rhsLength = 0
-	}
-
-	return concat{
-		left:      lhs,
-		right:     rhs,
-		treedepth: depth + 1,
-		split:     lhsLength,
-		rLen:      rLenT(rhsLength),
-	}
-}
-
-func (c concat) depth() depthT { return c.treedepth }
-
-func (c concat) length() int64 {
+func (c *concat) length() int64 {
 	return c.split + c.rLength()
 }
 
-func (c concat) rLength() int64 {
+func (c *concat) rLength() int64 {
 	if c.rLen > 0 {
 		return int64(c.rLen)
 	}
 	return c.right.length()
 }
 
-func (c concat) WriteTo(w io.Writer) (n int64, err error) {
-	m, e := c.left.WriteTo(w)
-	n += m
-	if e != nil {
-		return n, e
+func (c *concat) WriteTo(w io.Writer) (n int64, err error) {
+	n, err = c.left.WriteTo(w)
+	if err != nil {
+		return
 	}
 
-	m, e = c.right.WriteTo(w)
-	n += m
-	return n, e
+	m, err := c.right.WriteTo(w)
+	return n + m, err
 }
 
 // Precondition: start < end
-func (c concat) slice(start, end int64) node {
+func (c *concat) slice(start, end int64) node {
 	// If only slicing into one side, recurse to that side.
-	if start > c.split {
-		return c.right.slice(start-c.split, end-c.split)
-	}
 	if end <= c.split {
 		return c.left.slice(start, end)
+	}
+	if start >= c.split {
+		return c.right.slice(start-c.split, end-c.split)
 	}
 	clength := c.split + c.right.length()
 	if start <= 0 && end >= clength {
@@ -111,7 +74,7 @@ func (c concat) slice(start, end int64) node {
 	return conc(left, right, leftLen, rightLen)
 }
 
-func (c concat) dropPrefix(start int64) node {
+func (c *concat) dropPrefix(start int64) node {
 	switch {
 	case start <= 0:
 		return c
@@ -123,7 +86,7 @@ func (c concat) dropPrefix(start int64) node {
 	}
 }
 
-func (c concat) dropPostfix(end int64) node {
+func (c *concat) dropPostfix(end int64) node {
 	switch {
 	case end <= 0:
 		return emptyNode
@@ -137,7 +100,7 @@ func (c concat) dropPostfix(end int64) node {
 	}
 }
 
-func (c concat) walkLeaves(f func(leaf)) {
+func (c *concat) walkLeaves(f func(leaf)) {
 	c.left.walkLeaves(f)
 	c.right.walkLeaves(f)
 }

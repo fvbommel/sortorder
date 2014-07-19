@@ -29,7 +29,7 @@ var (
 func binSearch(N int64, arr []int64) int {
 	// Assuming "virtual" elements -1 and len(arr) which are respectively
 	// 1 smaller or larger than the first or last element actually in the array:
-	// invariant: arr[start] < N <= arr[end]
+	// invariant: arr[start] < N < arr[end]
 	start, end := -1, len(arr)
 	for end-start > 1 {
 		mid := (start + end) / 2
@@ -37,12 +37,13 @@ func binSearch(N int64, arr []int64) int {
 		switch {
 		case elt < N:
 			start = mid
-		case elt > N:
+		case N < elt:
 			end = mid
 		default: // Exactly equal
 			return mid
 		}
 	}
+	// start + 1 == end, so the invariant gives us: arr[end-1] < N < arr[end]
 	return end
 }
 
