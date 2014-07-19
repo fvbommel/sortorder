@@ -44,7 +44,7 @@ func (r *Reader) nextNode() {
 
 // Read implements io.Reader.
 func (r *Reader) Read(p []byte) (n int, err error) {
-	if false && Debug {
+	if false && debug {
 		defer func() {
 			fmt.Printf("Wrote %v bytes: %q (err=%v)\n", n, p[:n], err)
 			if err != nil {

@@ -1,4 +1,4 @@
 package rope
 
-// Debug enables debug output.
-var Debug = true
+// debug enables debug output.
+const debug = true

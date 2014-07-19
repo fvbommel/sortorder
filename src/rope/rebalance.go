@@ -119,7 +119,7 @@ func (r Rope) Rebalance() Rope {
 				scratch[bucket].n = nil // clear bucket
 			}
 		}
-		if Debug {
+		if debug {
 			if b := binSearch(nLen, fibs); b != bucket {
 				panic(fmt.Errorf("Bucket grew from %d to %d", bucket, b))
 			}
