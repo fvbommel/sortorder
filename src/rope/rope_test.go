@@ -92,3 +92,16 @@ func TestDropPostfix(t *testing.T) {
 		assert.Equal(t, ss.want, got.node, msg)
 	}
 }
+
+func TestGoString(t *testing.T) {
+	for i, format := range []string{"%v", "%#v"} {
+		for _, str := range []string{"abc", "\""} {
+			want := fmt.Sprintf(format, str)
+			if MarkGoStringedRope && i == 1 {
+				// GoStringer
+				want = "/*Rope*/ " + want
+			}
+			assert.Equal(t, want, fmt.Sprintf(format, New(str)))
+		}
+	}
+}

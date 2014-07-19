@@ -10,6 +10,7 @@ package rope
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 )
 
@@ -42,6 +43,18 @@ func (r Rope) String() string {
 	}
 	// The rope is not contiguous.
 	return string(r.Bytes())
+}
+
+// GoString materializes the Rope as a quoted string value.
+func (r Rope) GoString() string {
+	// Perhaps technically more correct, but not nearly as useful:
+	//	 return fmt.Sprintf("rope.New(%q)", r.String())
+
+	// Instead, (mostly) pretend we're a regular string.
+	if MarkGoStringedRope {
+		return fmt.Sprintf("/*Rope*/ %#v", r.String())
+	}
+	return fmt.Sprintf("%#v", r.String())
 }
 
 // Bytes returns the string represented by this Rope as a []byte.
