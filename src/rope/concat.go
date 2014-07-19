@@ -23,10 +23,10 @@ type (
 func (c *concat) depth() depthT { return c.TreeDepth }
 
 func (c *concat) length() int64 {
-	return c.Split + c.RLength()
+	return c.Split + c.rLength()
 }
 
-func (c *concat) RLength() int64 {
+func (c *concat) rLength() int64 {
 	if c.RLen > 0 {
 		return int64(c.RLen)
 	}
@@ -52,7 +52,7 @@ func (c *concat) slice(start, end int64) node {
 	if start >= c.Split {
 		return c.Right.slice(start-c.Split, end-c.Split)
 	}
-	clength := c.Split + c.Right.length()
+	clength := c.Split + c.rLength()
 	if start <= 0 && end >= clength {
 		return c
 	}
@@ -92,7 +92,7 @@ func (c *concat) dropPostfix(end int64) node {
 		return emptyNode
 	case end <= c.Split:
 		return c.Left.dropPostfix(end)
-	case end >= c.Split+c.RLength():
+	case end >= c.Split+c.rLength():
 		return c
 	default: // c.Split < end < c.length()
 		end -= c.Split

@@ -95,6 +95,12 @@ var substrings = []struct {
 		start: -200,
 		end:   -100,
 	},
+	{
+		orig:  tree,
+		want:  conc(leaf("23"), leaf("4"), 0, 0),
+		start: 1,
+		end:   4,
+	},
 }
 
 func TestConcatSubstr(t *testing.T) {

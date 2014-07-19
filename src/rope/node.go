@@ -11,7 +11,6 @@ type (
 		length() int64
 
 		// Slice returns a slice of the node.
-		// Precondition: start < end
 		slice(start, end int64) node
 
 		dropPrefix(start int64) node

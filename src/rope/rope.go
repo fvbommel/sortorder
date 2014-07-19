@@ -46,10 +46,11 @@ func (r Rope) String() string {
 
 // Bytes returns the string represented by this Rope as a []byte.
 func (r Rope) Bytes() []byte {
-	if r.node == nil {
+	len := r.Len()
+	if len == 0 {
 		return nil
 	}
-	buf := bytes.NewBuffer(make([]byte, 0, r.Len()))
+	buf := bytes.NewBuffer(make([]byte, 0, len))
 	r.WriteTo(buf)
 	return buf.Bytes()
 }
@@ -96,7 +97,7 @@ func (r Rope) Append(rhs ...Rope) Rope {
 //
 // If start >= r.Len(), an empty Rope is returned.
 func (r Rope) DropPrefix(start int64) Rope {
-	if start == 0 || r.node == nil {
+	if start <= 0 || r.node == nil {
 		return r
 	}
 	return Rope{
@@ -113,7 +114,7 @@ func (r Rope) DropPostfix(end int64) Rope {
 		return r
 	}
 	return Rope{
-		node: r.node.dropPrefix(end),
+		node: r.node.dropPostfix(end),
 	}
 }
 

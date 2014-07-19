@@ -15,7 +15,6 @@ func (l leaf) WriteTo(w io.Writer) (n int64, err error) {
 	return int64(n1), err
 }
 
-// Precondition: start < end
 func (l leaf) slice(start, end int64) node {
 	if start < 0 {
 		start = 0
