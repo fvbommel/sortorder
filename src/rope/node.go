@@ -56,11 +56,11 @@ func conc(lhs, rhs node, lhsLength, rhsLength int64) node {
 	}
 
 	return &concat{
-		left:      lhs,
-		right:     rhs,
-		treedepth: depth + 1,
-		split:     lhsLength,
-		rLen:      rLenT(rhsLength),
+		Left:      lhs,
+		Right:     rhs,
+		TreeDepth: depth + 1,
+		Split:     lhsLength,
+		RLen:      rLenT(rhsLength),
 	}
 }
 

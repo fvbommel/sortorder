@@ -8,81 +8,81 @@ import (
 type (
 	concat struct {
 		// Subtrees. Neither may be nil or length zero.
-		left, right node
-		// Length of left subtree. (relative index where the substrings meet)
-		split int64
-		// Cached length of right subtree, or 0 if out of range.
-		rLen rLenT
+		Left, Right node
+		// Length of Left subtree. (relative index where the substrings meet)
+		Split int64
+		// Cached length of Right subtree, or 0 if out of range.
+		RLen rLenT
 		// Cached depth of the tree.
-		treedepth depthT
+		TreeDepth depthT
 	}
 
 	rLenT uint32
 )
 
-func (c *concat) depth() depthT { return c.treedepth }
+func (c *concat) depth() depthT { return c.TreeDepth }
 
 func (c *concat) length() int64 {
-	return c.split + c.rLength()
+	return c.Split + c.RLength()
 }
 
-func (c *concat) rLength() int64 {
-	if c.rLen > 0 {
-		return int64(c.rLen)
+func (c *concat) RLength() int64 {
+	if c.RLen > 0 {
+		return int64(c.RLen)
 	}
-	return c.right.length()
+	return c.Right.length()
 }
 
 func (c *concat) WriteTo(w io.Writer) (n int64, err error) {
-	n, err = c.left.WriteTo(w)
+	n, err = c.Left.WriteTo(w)
 	if err != nil {
 		return
 	}
 
-	m, err := c.right.WriteTo(w)
+	m, err := c.Right.WriteTo(w)
 	return n + m, err
 }
 
 // Precondition: start < end
 func (c *concat) slice(start, end int64) node {
 	// If only slicing into one side, recurse to that side.
-	if end <= c.split {
-		return c.left.slice(start, end)
+	if end <= c.Split {
+		return c.Left.slice(start, end)
 	}
-	if start >= c.split {
-		return c.right.slice(start-c.split, end-c.split)
+	if start >= c.Split {
+		return c.Right.slice(start-c.Split, end-c.Split)
 	}
-	clength := c.split + c.right.length()
+	clength := c.Split + c.Right.length()
 	if start <= 0 && end >= clength {
 		return c
 	}
 
-	left := c.left
-	leftLen := c.split
-	if start > 0 || end < c.split {
-		left = left.slice(start, end)
-		leftLen = -1 // Recompute if needed.
+	Left := c.Left
+	LeftLen := c.Split
+	if start > 0 || end < c.Split {
+		Left = Left.slice(start, end)
+		LeftLen = -1 // Recompute if needed.
 	}
 
-	right := c.right
-	rightLen := int64(c.rLen)
-	if start > c.split || end < clength {
-		right = c.right.slice(start-c.split, end-c.split)
-		rightLen = -1 // Recompute if needed.
+	Right := c.Right
+	RightLen := int64(c.RLen)
+	if start > c.Split || end < clength {
+		Right = c.Right.slice(start-c.Split, end-c.Split)
+		RightLen = -1 // Recompute if needed.
 	}
 
-	return conc(left, right, leftLen, rightLen)
+	return conc(Left, Right, LeftLen, RightLen)
 }
 
 func (c *concat) dropPrefix(start int64) node {
 	switch {
 	case start <= 0:
 		return c
-	case start < c.split:
-		return conc(c.left.dropPrefix(start), c.right,
-			c.split-start, int64(c.rLen))
-	default: // start >= c.split
-		return c.right.dropPrefix(start - c.split)
+	case start < c.Split:
+		return conc(c.Left.dropPrefix(start), c.Right,
+			c.Split-start, int64(c.RLen))
+	default: // start >= c.Split
+		return c.Right.dropPrefix(start - c.Split)
 	}
 }
 
@@ -90,17 +90,17 @@ func (c *concat) dropPostfix(end int64) node {
 	switch {
 	case end <= 0:
 		return emptyNode
-	case end <= c.split:
-		return c.left.dropPostfix(end)
-	case end >= c.split+c.rLength():
+	case end <= c.Split:
+		return c.Left.dropPostfix(end)
+	case end >= c.Split+c.RLength():
 		return c
-	default: // c.split < end < c.length()
-		end -= c.split
-		return conc(c.left, c.right.dropPostfix(end), c.split, end)
+	default: // c.Split < end < c.length()
+		end -= c.Split
+		return conc(c.Left, c.Right.dropPostfix(end), c.Split, end)
 	}
 }
 
 func (c *concat) walkLeaves(f func(leaf)) {
-	c.left.walkLeaves(f)
-	c.right.walkLeaves(f)
+	c.Left.walkLeaves(f)
+	c.Right.walkLeaves(f)
 }

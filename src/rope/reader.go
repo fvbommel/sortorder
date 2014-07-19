@@ -31,7 +31,7 @@ func (r *Reader) pushSubtree(n node) {
 		}
 		conc := n.(*concat)
 		r.stack = append(r.stack, conc)
-		n = conc.left
+		n = conc.Left
 	}
 }
 
