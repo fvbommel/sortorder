@@ -1,9 +1,6 @@
 package rope
 
-import (
-	"fmt"
-	"sync"
-)
+import "sync"
 
 var (
 	// A cache of Fibonacci numbers.
@@ -56,7 +53,7 @@ func getFibCache(N int64) []int64 {
 	fibLock.RLock()
 	defer fibLock.RUnlock()
 
-	if fibCache[len(fibCache)] < N {
+	if fibCache[len(fibCache)-1] < N {
 		// Calculate some more numbers
 		extendFibs(N)
 	}
@@ -78,6 +75,12 @@ func extendFibs(N int64) {
 	a, b := fibCache[len(fibCache)-2], fibCache[len(fibCache)-1]
 	for b < N {
 		a, b = b, a+b
+
+		if b <= a {
+			// Overflow
+			break
+		}
+
 		fibCache = append(fibCache, b)
 	}
 }
@@ -89,14 +92,18 @@ func (r Rope) isBalanced() bool {
 	}
 
 	len := r.Len()
-	maxDepth := reverseFib(len) - 2
+	maxDepth := reverseFib(len)
 	return int(r.node.depth()) <= maxDepth
 }
 
 // Rebalance rebalances a rope.
 func (r Rope) Rebalance() Rope {
-	len := r.Len()
-	fibs := getFibCache(len)
+	if r.node == nil {
+		return r
+	}
+
+	rLen := r.Len()
+	fibs := getFibCache(rLen)
 
 	// The concatenation of non-empty nodes in the scratch array, in order of
 	// decreasing index, is equivalent to the concatenation of leaves walked
@@ -105,26 +112,30 @@ func (r Rope) Rebalance() Rope {
 		n   node
 		len int64
 	}
-	scratch := make([]B, 1+binSearch(len, fibs))
+	scratch := make([]B, 1+binSearch(rLen, fibs))
+
 	r.node.walkLeaves(func(l leaf) {
 		nLen := l.length()
-		bucket := binSearch(nLen, fibs)
-
 		n := node(l)
-		for i := bucket; i >= 0; i-- {
-			b := scratch[bucket]
+
+		// Find the right place for this node. It must be in the lowest non-nil
+		// index, so it accumulates older nodes as it passes them on the way to
+		// its bucket. This means its target bucket may in fact change as it
+		// grows.
+		i := 0
+		for ; i < len(fibs) && fibs[i] <= nLen; i++ {
+			b := scratch[i]
 			if b.n != nil {
-				n = conc(n, b.n, nLen, b.len)
+				n = conc(b.n, n, b.len, nLen)
 				nLen += b.len
-				scratch[bucket].n = nil // clear bucket
+				scratch[i] = B{}
 			}
 		}
-		if debug {
-			if b := binSearch(nLen, fibs); b != bucket {
-				panic(fmt.Errorf("Bucket grew from %d to %d", bucket, b))
-			}
+		if i > 0 {
+			i-- // We went one bucket too far.
 		}
-		scratch[bucket] = B{n, nLen}
+
+		scratch[i] = B{n, nLen}
 	})
 	nw := B{}
 	for _, b := range scratch {
@@ -137,6 +148,7 @@ func (r Rope) Rebalance() Rope {
 			}
 		}
 	}
+
 	if nw.n == r.node {
 		return r
 	}
