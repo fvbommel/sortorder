@@ -13,6 +13,8 @@ type (
 		depth() depthT
 		length() int64
 
+		at(idx int64) byte
+
 		// Slice returns a slice of the node.
 		slice(start, end int64) node
 

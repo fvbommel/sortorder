@@ -10,6 +10,7 @@ package rope
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -74,6 +75,15 @@ func (r Rope) WriteTo(w io.Writer) (n int64, err error) {
 		return 0, nil // Nothing to do
 	}
 	return r.node.WriteTo(w)
+}
+
+// At returns the byte at index idx.
+// The index must be >= 0 and < r.Len().
+func (r Rope) At(idx int64) byte {
+	if idx < 0 || idx >= r.Len() {
+		panic(errors.New("rope: index out of bounds"))
+	}
+	return r.node.at(idx)
 }
 
 // Len returns the length of the string represented by the Rope.

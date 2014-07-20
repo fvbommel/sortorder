@@ -26,6 +26,13 @@ func (c *concat) length() int64 {
 	return c.Split + c.rLength()
 }
 
+func (c *concat) at(idx int64) byte {
+	if idx < c.Split {
+		return c.Left.at(idx)
+	}
+	return c.Right.at(idx - c.Split)
+}
+
 func (c *concat) rLength() int64 {
 	if c.RLen > 0 {
 		return int64(c.RLen)

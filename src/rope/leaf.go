@@ -7,8 +7,9 @@ import (
 // A node representing a contiguous string
 type leaf string
 
-func (l leaf) depth() depthT { return 0 }
-func (l leaf) length() int64 { return int64(len(l)) }
+func (l leaf) depth() depthT     { return 0 }
+func (l leaf) length() int64     { return int64(len(l)) }
+func (l leaf) at(idx int64) byte { return l[idx] }
 
 func (l leaf) WriteTo(w io.Writer) (n int64, err error) {
 	n1, err := io.WriteString(w, string(l))

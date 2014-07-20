@@ -38,6 +38,14 @@ func TestAppendRope(t *testing.T) {
 
 var treeR = New("123").Append(New("456"), New("abc")).Append(New("def"))
 
+func testAt(t *testing.T) {
+	str := treeR.String()
+	length := treeR.Len()
+	for i := int64(0); i < length; i++ {
+		assert.Equal(t, str[i], treeR.At(i))
+	}
+}
+
 func TestLen(t *testing.T) {
 	assert.Equal(t, int64(0), Rope{}.Len())
 	assert.Equal(t, int64(12), treeR.Len())
