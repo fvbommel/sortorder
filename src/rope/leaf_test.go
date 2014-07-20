@@ -2,6 +2,7 @@ package rope
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/bruth/assert"
@@ -37,13 +38,16 @@ func TestLeaf(t *testing.T) {
 	assert.Equal(t, "foo", buf.String())
 
 	counter := 0
-	v.walkLeaves(func(l leaf) {
+	err := v.walkLeaves(func(l string) error {
 		if counter > 0 {
 			t.Errorf("leaf.walkLeaves: function called too many times")
-			return
+			return errors.New("called a lot")
 		}
 		counter++
 
-		assert.Equal(t, v, l)
+		assert.Equal(t, string(v), l)
+
+		return nil
 	})
+	assert.Nil(t, err)
 }

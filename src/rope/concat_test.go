@@ -2,6 +2,7 @@ package rope
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -159,17 +160,37 @@ func TestConcatWriteTo(t *testing.T) {
 
 func TestConcatWalkLeaves(t *testing.T) {
 	counter := 0
-	tree.walkLeaves(func(l leaf) {
+	err := tree.walkLeaves(func(l string) error {
 		switch counter {
 		case 0:
-			assert.Equal(t, lhs, l)
+			assert.Equal(t, string(lhs), l)
 		case 1:
-			assert.Equal(t, rhs, l)
+			assert.Equal(t, string(rhs), l)
 		case 2:
 			t.Errorf("leaf.walkLeaves: function called too many times")
 		default:
 			// Ignore more than two calls, error has already been produced.
 		}
 		counter++
+
+		return nil
 	})
+	assert.Nil(t, err)
+
+	counter = 0
+	err = tree.walkLeaves(func(l string) error {
+		switch counter {
+		case 0:
+			assert.Equal(t, string(lhs), l)
+			return errors.New("stop now")
+		case 1:
+			t.Errorf("leaf.walkLeaves: did not stop after returning true")
+		default:
+			// Ignore more than two calls, error has already been produced.
+		}
+		counter++
+
+		return nil
+	})
+	assert.Equal(t, errors.New("stop now"), err)
 }

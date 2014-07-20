@@ -24,7 +24,7 @@ type (
 		io.WriterTo
 
 		// walkLeaves calls f on each leaf of the graph in order.
-		walkLeaves(f func(leaf))
+		walkLeaves(f func(string) error) error
 	}
 
 	depthT byte

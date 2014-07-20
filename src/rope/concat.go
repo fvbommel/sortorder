@@ -107,7 +107,10 @@ func (c *concat) dropPostfix(end int64) node {
 	}
 }
 
-func (c *concat) walkLeaves(f func(leaf)) {
-	c.Left.walkLeaves(f)
-	c.Right.walkLeaves(f)
+func (c *concat) walkLeaves(f func(string) error) (err error) {
+	err = c.Left.walkLeaves(f)
+	if err == nil {
+		err = c.Right.walkLeaves(f)
+	}
+	return
 }

@@ -114,7 +114,8 @@ func (r Rope) Rebalance() Rope {
 	}
 	scratch := make([]B, 1+binSearch(rLen, fibs))
 
-	r.node.walkLeaves(func(l leaf) {
+	r.node.walkLeaves(func(ls string) error {
+		l := leaf(ls)
 		nLen := l.length()
 		n := node(l)
 
@@ -136,6 +137,8 @@ func (r Rope) Rebalance() Rope {
 		}
 
 		scratch[i] = B{n, nLen}
+
+		return nil
 	})
 	nw := B{}
 	for _, b := range scratch {

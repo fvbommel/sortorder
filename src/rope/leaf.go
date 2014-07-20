@@ -53,6 +53,10 @@ func (l leaf) dropPostfix(end int64) node {
 	}
 }
 
-func (l leaf) walkLeaves(f func(leaf)) {
-	f(l)
+func (l leaf) walkLeaves(f func(string) error) error {
+	if len(l) == 0 {
+		// Don't bother walking empty leaves.
+		return nil
+	}
+	return f(string(l))
 }

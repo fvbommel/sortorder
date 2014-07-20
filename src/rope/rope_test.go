@@ -2,6 +2,7 @@ package rope
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -118,4 +119,45 @@ func TestGoString(t *testing.T) {
 			assert.Equal(t, want, fmt.Sprintf(format, New(str)))
 		}
 	}
+}
+
+func TestWalk(t *testing.T) {
+	defer disableCoalesce()()
+
+	for _, r := range []Rope{Rope{}, emptyRope} {
+		r.Walk(func(_ string) error {
+			t.Error("call to empty Rope's Walk parameter")
+			return nil
+		})
+	}
+
+	for _, r := range []Rope{
+		New("abc").Append(New("def")).Append(New("ghi")),
+	} {
+		str := r.String()
+		err := r.Walk(func(part string) error {
+			assert.Equal(t, str[:len(part)], part)
+			str = str[len(part):]
+			return nil
+		})
+		assert.Nil(t, err)
+		assert.Equal(t, "", str)
+	}
+
+	for _, r := range []Rope{
+		New("abc").Append(New("def")).Append(New("ghi")),
+	} {
+		str := r.String()
+		err := r.Walk(func(part string) error {
+			assert.Equal(t, str[:len(part)], part)
+			str = str[len(part):]
+			if len(str) < 4 {
+				return errors.New("stop now")
+			}
+			return nil
+		})
+		assert.Equal(t, err, errors.New("stop now"))
+		assert.True(t, 0 < len(str) && len(str) < 4)
+	}
+
 }

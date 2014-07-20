@@ -157,3 +157,12 @@ func (r Rope) Slice(start, end int64) Rope {
 	}
 	return Rope{node: r.node.slice(start, end)}
 }
+
+// Walk passes the Rope, piece-by-piece, to f.
+// If f returns an error Walk() returns that error without calling f again.
+func (r Rope) Walk(f func(string) error) error {
+	if r.node == nil {
+		return nil
+	}
+	return r.node.walkLeaves(f)
+}
