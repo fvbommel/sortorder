@@ -30,14 +30,33 @@ func TestEmptyRope(t *testing.T) {
 	}
 }
 
-func TestAppendRope(t *testing.T) {
+func TestAppend(t *testing.T) {
 	r := New("123")
-	r2 := r.Append(New("456"), New("abc"), New("def"))
+	assert.Equal(t, "123", r.String())
+
+	r2 := r.Append(New("456"))
+	assert.Equal(t, "123456", r2.String())
+	assert.Equal(t, "123", r.String())
+
+	r2 = r.Append(New("456"), New("abc"), New("def"))
 	assert.Equal(t, "123456abcdef", r2.String())
 	assert.Equal(t, "123", r.String())
 }
 
-var treeR = New("123").Append(New("456"), New("abc")).Append(New("def"))
+func TestAppendString(t *testing.T) {
+	r := New("123")
+	assert.Equal(t, "123", r.String())
+
+	r2 := r.AppendString("456")
+	assert.Equal(t, "123456", r2.String())
+	assert.Equal(t, "123", r.String())
+
+	r2 = r.AppendString("456", "abc", "def")
+	assert.Equal(t, "123456abcdef", r2.String())
+	assert.Equal(t, "123", r.String())
+}
+
+var treeR = New("123").AppendString("456", "abc").AppendString("def")
 
 func testAt(t *testing.T) {
 	str := treeR.String()
@@ -132,7 +151,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	for _, r := range []Rope{
-		New("abc").Append(New("def")).Append(New("ghi")),
+		New("abc").AppendString("def").AppendString("ghi"),
 	} {
 		str := r.String()
 		err := r.Walk(func(part string) error {
@@ -145,7 +164,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	for _, r := range []Rope{
-		New("abc").Append(New("def")).Append(New("ghi")),
+		New("abc").AppendString("def").AppendString("ghi"),
 	} {
 		str := r.String()
 		err := r.Walk(func(part string) error {

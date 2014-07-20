@@ -19,10 +19,10 @@ func init() {
 	defer disableCoalesce()()
 
 	rebalanceTestRopes = []Rope{
-		New("a").Append(New("bc").Append(New("d").Append(New("ef")))), //.Append(New("g")),
-		New("a").Append(New("bc").Append(New("d").Append(New("ef")))).Append(New("g")),
-		New("a").Append(New("bcd")).Append(New("efghijkl")).Append(New("mno")),
-		New("abc").Append(New("def")).Append(New("def")).Append(New("def")).Append(New("def")).Append(New("def")).Append(New("ghiklmnopqrstuvwxyzklmnopqrstuvwxyz")).Append(New("j")).Append(New("j")).Append(New("j")).Append(New("j")).Append(New("j")).Append(New("klmnopqrstuvwxyz")),
+		New("a").Append(New("bc").Append(New("d").AppendString("ef"))), //.AppendString("g"),
+		New("a").Append(New("bc").Append(New("d").AppendString("ef"))).AppendString("g"),
+		New("a").AppendString("bcd").AppendString("efghijkl").AppendString("mno"),
+		New("abc").AppendString("def").AppendString("def").AppendString("def").AppendString("def").AppendString("def").AppendString("ghiklmnopqrstuvwxyzklmnopqrstuvwxyz").AppendString("j").AppendString("j").AppendString("j").AppendString("j").AppendString("j").AppendString("klmnopqrstuvwxyz"),
 	}
 	//~ for i, r := range largeRopes {
 	//~ for j := 0; j < 8; j++ {
@@ -34,7 +34,7 @@ func init() {
 
 	var r Rope
 	for i := 0; i < 100; i++ {
-		r = r.Append(New(string(' ' + i)))
+		r = r.AppendString(string(' ' + i))
 	}
 	rebalanceTestRopes = append(rebalanceTestRopes, r)
 

@@ -115,6 +115,17 @@ func (r Rope) Append(rhs ...Rope) Rope {
 	return Rope{node: node}
 }
 
+// AppendString is like Append, but accepts strings.
+func (r Rope) AppendString(rhs ...string) Rope {
+	leafs := make([]node, 0, len(rhs))
+	for _, str := range rhs {
+		if len(str) != 0 {
+			leafs = append(leafs, leaf(str))
+		}
+	}
+	return Rope{node: concMany(r.node, leafs...)}
+}
+
 // DropPrefix returns a postfix of a rope, starting at index.
 // It's analogous to str[start:].
 //
