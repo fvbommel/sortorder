@@ -1,6 +1,9 @@
 package rope
 
-import "io"
+import (
+	"bytes"
+	"io"
+)
 
 type (
 	// The internal representation of a Rope.
@@ -27,6 +30,12 @@ type (
 
 var emptyNode = node(leaf("")) // The canonical empty node.
 
+// Concatenations below this size threshold are combined into a single leaf
+// node.
+//
+// The value is only modified by tests.
+var concatThreshold = int64(6 * 8)
+
 // Helper function: returns the concatenation of the arguments.
 // If lhsLength or rhsLength are <= 0, they are determined automatically if
 // needed.
@@ -49,6 +58,28 @@ func conc(lhs, rhs node, lhsLength, rhsLength int64) node {
 	if rhsLength <= 0 {
 		rhsLength = rhs.length()
 	}
+
+	// Optimize small + small
+	if lhsLength+rhsLength <= concatThreshold {
+		buf := bytes.NewBuffer(make([]byte, 0, lhsLength+rhsLength))
+		lhs.WriteTo(buf)
+		rhs.WriteTo(buf)
+		return leaf(buf.String())
+	}
+	// Re-associate (large+small) + small ==> large + (small+small)
+	if cc, ok := lhs.(*concat); ok {
+		ccrlen := cc.rLength()
+		if ccrlen+rhsLength <= concatThreshold {
+			return conc(cc.Left, conc(cc.Right, rhs, ccrlen, rhsLength), cc.Split, ccrlen+rhsLength)
+		}
+	}
+	// Re-associate small + (small+large) ==> (small+small) + large
+	if cc, ok := rhs.(*concat); ok {
+		if lhsLength+cc.Split <= concatThreshold {
+			return conc(conc(lhs, cc.Left, lhsLength, cc.Split), cc.Right, cc.Split, cc.rLength())
+		}
+	}
+
 	if rhsLength > int64(^rLenT(0)) {
 		// Out of range
 		rhsLength = 0

@@ -56,6 +56,8 @@ func TestWriteTo(t *testing.T) {
 }
 
 func TestSubstring(t *testing.T) {
+	defer disableCoalesce()()
+
 	// See concat_test.go for the table used.
 	for _, ss := range substrings {
 		orig := Rope{ss.orig}
@@ -66,6 +68,8 @@ func TestSubstring(t *testing.T) {
 }
 
 func TestDropPrefix(t *testing.T) {
+	defer disableCoalesce()()
+
 	// See concat_test.go for the table used.
 	for _, ss := range substrings {
 		if ss.end < ss.orig.length() {
@@ -80,6 +84,8 @@ func TestDropPrefix(t *testing.T) {
 }
 
 func TestDropPostfix(t *testing.T) {
+	defer disableCoalesce()()
+
 	// See concat_test.go for the table used.
 	for _, ss := range substrings {
 		if ss.start > 0 {
