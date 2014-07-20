@@ -30,9 +30,26 @@ func TestEmptyRope(t *testing.T) {
 	}
 }
 
+func TestNew(t *testing.T) {
+	for _, str := range []string{"", "abc"} {
+		r := New(str)
+		assert.Equal(t, r.node, leaf(str))
+	}
+}
+
 func TestAppend(t *testing.T) {
+	defer disableCoalesce()()
+
 	r := New("123")
 	assert.Equal(t, "123", r.String())
+
+	assert.Equal(t, r, r.Append(Rope{}))
+	assert.Equal(t, r, r.Append(New("")))
+
+	// Test for structural equality in presence of empty strings.
+	rab := r.Append(New("a"), New("c"), New("b"))
+	raeb := r.Append(New("a"), New("c"), New(""), New("b"))
+	assert.Equal(t, rab, raeb, "should ignore empty arguments to Append")
 
 	r2 := r.Append(New("456"))
 	assert.Equal(t, "123456", r2.String())
@@ -44,8 +61,18 @@ func TestAppend(t *testing.T) {
 }
 
 func TestAppendString(t *testing.T) {
+	defer disableCoalesce()()
+
 	r := New("123")
 	assert.Equal(t, "123", r.String())
+
+	assert.Equal(t, r, r.Append(Rope{}))
+	assert.Equal(t, r, r.Append(New("")))
+
+	// Test for structural equality in presence of empty strings.
+	rab := r.AppendString("a", "c", "b")
+	raeb := r.AppendString("a", "c", "", "b")
+	assert.Equal(t, rab, raeb, "should ignore empty arguments to AppendString")
 
 	r2 := r.AppendString("456")
 	assert.Equal(t, "123456", r2.String())
@@ -56,9 +83,15 @@ func TestAppendString(t *testing.T) {
 	assert.Equal(t, "123", r.String())
 }
 
-var treeR = New("123").AppendString("456", "abc").AppendString("def")
+var treeR Rope
 
-func testAt(t *testing.T) {
+func init() {
+	defer disableCoalesce()()
+
+	treeR = New("123").AppendString("456", "abc").AppendString("def")
+}
+
+func TestAt(t *testing.T) {
 	str := treeR.String()
 	length := treeR.Len()
 	for i := int64(0); i < length; i++ {
@@ -76,6 +109,12 @@ func TestString(t *testing.T) {
 	assert.Equal(t, "123456abcdef", treeR.String())
 }
 
+func TestBytes(t *testing.T) {
+	assert.Equal(t, []byte(nil), Rope{}.Bytes())
+	assert.Equal(t, []byte(nil), New("").Bytes())
+	assert.Equal(t, []byte("123456abcdef"), treeR.Bytes())
+}
+
 func TestWriteTo(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	treeR.WriteTo(buf)
@@ -83,7 +122,7 @@ func TestWriteTo(t *testing.T) {
 	assert.Equal(t, "123456abcdef", buf.String())
 }
 
-func TestSubstring(t *testing.T) {
+func TestSlice(t *testing.T) {
 	defer disableCoalesce()()
 
 	// See concat_test.go for the table used.

@@ -107,7 +107,7 @@ func (r Rope) Append(rhs ...Rope) Rope {
 
 	list := make([]node, 0, len(rhs))
 	for _, item := range rhs {
-		if item.node != nil {
+		if item.node != nil && item.node != emptyNode {
 			list = append(list, item.node)
 		}
 	}
