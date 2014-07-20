@@ -45,25 +45,29 @@ func (r *Reader) nextNode() {
 // Read implements io.Reader.
 func (r *Reader) Read(p []byte) (n int, err error) {
 	if false && debug {
-		defer func() {
+		defer func(p []byte) {
 			fmt.Printf("Wrote %v bytes: %q (err=%v)\n", n, p[:n], err)
 			if err != nil {
 				fmt.Println()
 			}
-		}()
+		}(p)
 	}
-	for len(r.cur) == 0 {
-		if len(r.stack) == 0 {
-			// No more nodes to read.
-			return 0, io.EOF
+
+	for len(p) > 0 {
+		if len(r.cur) == 0 {
+			if len(r.stack) == 0 {
+				// No more nodes to read.
+				return n, io.EOF
+			}
+			// Done reading this node.
+			r.nextNode()
 		}
-		// Done reading this node.
-		r.nextNode()
+
+		m := copy(p, r.cur)
+		r.cur = r.cur[m:]
+		p = p[m:]
+		n += m
 	}
-
-	n = copy(p, r.cur)
-	r.cur = r.cur[n:]
-
 	if len(r.cur) == 0 && len(r.stack) == 0 {
 		err = io.EOF
 	}
