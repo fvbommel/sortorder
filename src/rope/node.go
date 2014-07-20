@@ -25,6 +25,8 @@ type (
 
 		// walkLeaves calls f on each leaf of the graph in order.
 		walkLeaves(f func(string) error) error
+
+		readAt(p []byte, start int64) (n int)
 	}
 
 	depthT byte

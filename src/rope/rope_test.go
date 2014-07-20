@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/bruth/assert"
@@ -218,4 +219,43 @@ func TestWalk(t *testing.T) {
 		assert.True(t, 0 < len(str) && len(str) < 4)
 	}
 
+}
+
+func TestReadAt(t *testing.T) {
+	want := treeR.Bytes()
+
+	buf := make([]byte, len(want)+1)
+
+	for start := 0; start < len(buf); start++ {
+		for end := start; end <= len(buf); end++ {
+			length := end - start
+			b := buf[0:length]
+			n, err := treeR.ReadAt(b, int64(start))
+
+			// Basic io.ReaderAt contract
+			assert.True(t, n <= length)
+			if n < length {
+				assert.Equal(t, io.EOF, err)
+			}
+
+			// Expected actual end and length
+			eEnd := end
+			if eEnd > len(want) {
+				eEnd = len(want)
+			}
+			eLen := eEnd - start
+
+			// Check for correctness
+			assert.Equal(t, eLen, n)
+			if eLen < length {
+				assert.Equal(t, io.EOF, err)
+			} else if eLen > length {
+				assert.Nil(t, err)
+			} else {
+				assert.True(t, err == nil || err == io.EOF)
+			}
+
+			assert.Equal(t, want[start:eEnd], b[:n])
+		}
+	}
 }

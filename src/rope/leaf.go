@@ -60,3 +60,10 @@ func (l leaf) walkLeaves(f func(string) error) error {
 	}
 	return f(string(l))
 }
+
+func (l leaf) readAt(p []byte, start int64) (n int) {
+	if start > int64(len(l)) {
+		return 0
+	}
+	return copy(p, l[start:])
+}

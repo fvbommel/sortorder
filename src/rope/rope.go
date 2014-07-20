@@ -177,3 +177,27 @@ func (r Rope) Walk(f func(string) error) error {
 	}
 	return r.node.walkLeaves(f)
 }
+
+// ReadAt implements io.ReaderAt.
+func (r Rope) ReadAt(p []byte, off int64) (n int, err error) {
+	expected := len(p)
+	if off < 0 {
+		panic("Rope.ReadAt: invalid offset")
+	}
+
+	if len(p) == 0 {
+		return
+	}
+
+	if r.node == nil {
+		if len(p) > 0 {
+			err = io.EOF
+		}
+		return
+	}
+	n = r.node.readAt(p, off)
+	if n < expected {
+		err = io.EOF
+	}
+	return
+}

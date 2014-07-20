@@ -1,8 +1,6 @@
 package rope
 
-import (
-	"io"
-)
+import "io"
 
 // A node representing the concatenation of two smaller nodes.
 type (
@@ -113,4 +111,18 @@ func (c *concat) walkLeaves(f func(string) error) (err error) {
 		err = c.Right.walkLeaves(f)
 	}
 	return
+}
+
+func (c *concat) readAt(p []byte, start int64) (n int) {
+	if start < c.Split {
+		n = c.Left.readAt(p, start)
+		if int64(n) < c.Split-start && n != len(p) {
+			panic("incomplete readAt")
+		}
+		if n == len(p) {
+			return
+		}
+	}
+	m := c.Right.readAt(p[n:], start+int64(n)-c.Split)
+	return m + n
 }
