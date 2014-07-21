@@ -125,6 +125,26 @@ func (r Rope) AppendString(rhs ...string) Rope {
 	return Rope{node: concMany(r.node, leafs...)}
 }
 
+// Repeat returns the receiver, repeated a number of times.
+func (r Rope) Repeat(count int64) Rope {
+	// Special cases:
+	switch count {
+	case 0:
+		return emptyRope
+	case 1:
+		return r
+	}
+
+	// General case:
+	orig := r
+	r = r.Repeat(count / 2)
+	r = r.Append(r)
+	if count%2 == 1 {
+		return r.Append(orig)
+	}
+	return r
+}
+
 // DropPrefix returns a postfix of a rope, starting at index.
 // It's analogous to str[start:].
 //

@@ -84,6 +84,17 @@ func TestAppendString(t *testing.T) {
 	assert.Equal(t, "123", r.String())
 }
 
+func TestRepeat(t *testing.T) {
+	r := New("a")
+	assert.Equal(t, "", r.Repeat(0).String())
+	assert.Equal(t, "a", r.Repeat(1).String())
+	assert.Equal(t, "aa", r.Repeat(2).String())
+	assert.Equal(t, "aaa", r.Repeat(3).String())
+	assert.Equal(t, "aaaa", r.Repeat(4).String())
+	assert.Equal(t, "aaaaa", r.Repeat(5).String())
+	assert.Equal(t, "aaaaaa", r.Repeat(6).String())
+}
+
 var treeR Rope
 
 func init() {
