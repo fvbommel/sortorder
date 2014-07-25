@@ -157,3 +157,11 @@ func (r Rope) Rebalance() Rope {
 	}
 	return Rope{nw.n}
 }
+
+func balanced(r Rope) Rope {
+	if r.isBalanced() {
+		return r
+	}
+
+	return r.Rebalance()
+}

@@ -29,7 +29,7 @@ type (
 		readAt(p []byte, start int64) (n int)
 	}
 
-	depthT byte
+	depthT uint32
 )
 
 var emptyNode = node(leaf("")) // The canonical empty node.
@@ -38,7 +38,7 @@ var emptyNode = node(leaf("")) // The canonical empty node.
 // node.
 //
 // The value is only modified by tests.
-var concatThreshold = int64(6 * 8)
+var concatThreshold = int64(1024) // int64(6 * 8)
 
 // Helper function: returns the concatenation of the arguments.
 // If lhsLength or rhsLength are <= 0, they are determined automatically if

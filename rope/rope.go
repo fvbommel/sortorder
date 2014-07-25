@@ -93,6 +93,12 @@ func (r Rope) Len() int64 {
 	return r.node.length()
 }
 
+// Depth returns the depth of the directed acyclic graph the Rope consists of
+// internally
+func (r Rope) Depth() uint32 {
+	return uint32(r.node.depth())
+}
+
 // Append returns the Rope representing the arguments appended to this rope.
 func (r Rope) Append(rhs ...Rope) Rope {
 	// Handle nil-node receiver
@@ -111,7 +117,7 @@ func (r Rope) Append(rhs ...Rope) Rope {
 		}
 	}
 	node := concMany(r.node, list...)
-	return Rope{node: node}
+	return balanced(Rope{node: node})
 }
 
 // AppendString is like Append, but accepts strings.
@@ -122,7 +128,7 @@ func (r Rope) AppendString(rhs ...string) Rope {
 			leafs = append(leafs, leaf(str))
 		}
 	}
-	return Rope{node: concMany(r.node, leafs...)}
+	return balanced(Rope{node: concMany(r.node, leafs...)})
 }
 
 // Repeat returns the receiver, repeated a number of times.
@@ -142,7 +148,7 @@ func (r Rope) Repeat(count int64) Rope {
 	if count%2 == 1 {
 		return r.Append(orig)
 	}
-	return r
+	return balanced(r)
 }
 
 // DropPrefix returns a postfix of a rope, starting at index.
