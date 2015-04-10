@@ -17,48 +17,103 @@ var level = 0
 // ShortRegexpString tries to construct a short regexp that matches exactly the
 // provided strings and nothing else.
 func ShortRegexpString(vs ...string) (res string) {
+	res, _ = shortRegexpString(dup(vs))
+	return res
+}
+
+func shortRegexpString(vs []string) (res string, singleClause bool) {
 	switch len(vs) {
 	case 0:
-		return "$.^" // Unmatchable?
+		return "$.^", true // Unmatchable?
 	case 1:
-		return regexp.QuoteMeta(vs[0]) // Nothing else to do.
+		return regexp.QuoteMeta(vs[0]), true // Nothing else to do.
 	}
 
 	// level++
 	// defer func(s string) {
 	// 	level--
-	// 	debugf("ShortRegexpString(%s) = %#q", s, res)
+	// 	debugf("ShortRegexpString(%s) = %#q, %v", s, res, singleClause)
 	// }(fmt.Sprintf("%#q", vs))
 
-	recurse := func(prefix, suffix string, data commonSs) (result string) {
-		//debugf("> recurse(%#q, %#q, %v) on %#q", prefix, suffix, data, vs)
-		if data.start > 0 {
-			result += ShortRegexpString(dup(vs[:data.start])...) + "|"
-		}
+	recurse := func(prefix, suffix string, data commonSs) (result string, singleClause bool) {
+		// debugf("> recurse(%#q, %#q, %v) on %#q", prefix, suffix, data, vs)
 
 		//debugf("%v/%#q/%#q: %v\n", vs, prefix, suffix, data)
 		varying := make([]string, data.end-data.start)
+		allExist := true
+		var preExistingIndices []int
 		for i := data.start; i < data.end; i++ {
-			varying[i-data.start] = vs[i][len(prefix) : len(vs[i])-len(suffix)]
+			substr := vs[i][len(prefix) : len(vs[i])-len(suffix)]
+			varying[i-data.start] = substr
+			if allExist {
+				found := false
+				for i := 0; i < len(vs); i++ {
+					if i == data.start {
+						i = data.end - 1
+						continue
+					}
+					if substr == vs[i] {
+						found = true
+						preExistingIndices = append(preExistingIndices, i)
+						break
+					}
+				}
+				allExist = found
+			}
 		}
-		middle := ShortRegexpString(varying...)
-		//debugf(">> ShortRegexpString(%#q) = %#q", varying, middle)
-		opt := ""
-		if strings.HasPrefix(middle, "|") {
-			middle = middle[1:]
-			opt = "?"
-		}
-		if len(middle) > 1 {
-			middle = fmt.Sprintf("(%s)%s", middle, opt)
-		} else if middle != "" {
-			middle += opt
-		}
-		result += prefix + middle + suffix
 
-		if data.end < len(vs) {
-			result += "|" + ShortRegexpString(dup(vs[data.end:])...)
+		var others []string
+		// combined := make([]string, 0, len(preExistingIndices))
+		if allExist && (prefix == "" || suffix == "") {
+			others = make([]string, 0, len(vs)-2*len(preExistingIndices))
+			sort.Ints(preExistingIndices)
+			for i, k := 0, 0; i < len(vs) && k < len(preExistingIndices); i++ {
+				if i == data.start {
+					i = data.end - 1
+					continue
+				} else if i == preExistingIndices[k] {
+					// combined = append(combined, vs[i])
+					// debugf("Eliminating %#q", vs[i])
+					k++
+				} else {
+					others = append(others, vs[i])
+				}
+			}
+		} else {
+			others = make([]string, len(vs)-(data.end-data.start))
+			copy(others, vs[:data.start])
+			copy(others[data.start:], vs[data.end:])
 		}
-		return result
+
+		middle, singleClause := shortRegexpString(varying)
+		// debugf(">> ShortRegexpString(%#q) = %#q", varying, middle)
+		if strings.HasPrefix(middle, "|") {
+			middle = optional(middle[1:])
+			singleClause = true
+		} else if len(middle) > 1 && !singleClause {
+			middle = fmt.Sprintf("(%s)", middle)
+		}
+
+		prefix, suffix = regexp.QuoteMeta(prefix), regexp.QuoteMeta(suffix)
+		switch {
+		case allExist && prefix == "": // M . S | M ==> M . S?
+			result = middle + optional(suffix)
+		case allExist && suffix == "": // P . M | M ==> P? . M
+			result = optional(prefix) + middle
+		default:
+			result = prefix + middle + suffix
+		}
+		if len(others) > 0 {
+			str, _ := shortRegexpString(others)
+			if strings.HasPrefix(str, "|") {
+				str = optional(str[1:])
+			}
+			// debugf("## ShortRegexpString(%#q) = %#q", others, str)
+			result = str + "|" + result
+			singleClause = false
+		}
+
+		return result, singleClause
 	}
 
 	// The length of a naive solution: N strings plus N-1 separators.
@@ -67,6 +122,7 @@ func ShortRegexpString(vs ...string) (res string) {
 		bestCost += len(regexp.QuoteMeta(v)) + 1
 	}
 	best := ""
+	bestSingle := false
 
 	found := false
 
@@ -76,10 +132,11 @@ func ShortRegexpString(vs ...string) (res string) {
 	for suffix, sufLoc := range commonSuffixes(vs, 2) {
 		// sufLoc := suffixes[suffix]
 		prefix := sharedPrefix(len(suffix), vs[sufLoc.start:sufLoc.end])
-		str := recurse(prefix, suffix, sufLoc)
+		str, single := recurse(prefix, suffix, sufLoc)
 		if len(str) < bestCost || (len(str) == bestCost && str < best) {
 			bestCost = len(str)
 			best = str
+			bestSingle = single
 			found = true
 		} else {
 			//debugf("! rejected %#q", str)
@@ -91,10 +148,11 @@ func ShortRegexpString(vs ...string) (res string) {
 	// debugf("Sorted: %#q", vs)
 	for prefix, preLoc := range commonPrefixes(vs, 2) {
 		suffix := sharedSuffix(len(prefix), vs[preLoc.start:preLoc.end])
-		str := recurse(prefix, suffix, preLoc)
+		str, single := recurse(prefix, suffix, preLoc)
 		if len(str) < bestCost || (len(str) == bestCost && str < best) {
 			bestCost = len(str)
 			best = str
+			bestSingle = single
 			found = true
 		} else {
 			//debugf("! rejected %#q", str)
@@ -103,14 +161,23 @@ func ShortRegexpString(vs ...string) (res string) {
 	}
 
 	if found {
-		return best
+		return best, bestSingle
 	}
 
 	// Last resort: Just put ORs between them (after escaping meta-characters)
 	for i := range vs {
 		vs[i] = regexp.QuoteMeta(vs[i])
 	}
-	return strings.Join(vs, "|")
+	return strings.Join(vs, "|"), false
+}
+
+func optional(s string) string {
+	if len(s) > 1 {
+		s = fmt.Sprintf("(%s)?", s)
+	} else if s != "" {
+		s += "?"
+	}
+	return s
 }
 
 // removeDups removes duplicate strings from vs and returns it.

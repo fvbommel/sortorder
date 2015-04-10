@@ -2,6 +2,8 @@ package util
 
 import "testing"
 
+// TODO: make these tests less ordering-dependent.
+
 func TestShortRegexpString(t *testing.T) {
 	for _, test := range []struct {
 		in  []string
@@ -12,13 +14,11 @@ func TestShortRegexpString(t *testing.T) {
 		{[]string{"abccf", "abcde"}, "abc(cf|de)"},
 		{[]string{"abcdefabcf", "abcdefabde", "abc"}, "abc(defab(cf|de))?"},
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css"},
-			`css/bootstrap(-theme(\.min)?|\.min)?.css`},
-		// `css/bootstrap(-theme)?(\.min)?.css)`}, // Ideal
+			`css/bootstrap(-theme)?(\.min)?\.css`},
 		{[]string{`bootstrap-theme`, `main`, `normalize`, `bootstrap-theme.min`, `bootstrap.min`, `bootstrap`, `pygment_highlights`},
-			`bootstrap(-theme(\.min)?|\.min)?|main|normalize|pygment_highlights`},
+			`main|normalize|pygment_highlights|bootstrap(-theme)?(\.min)?`},
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css", "css/main.css", "css/normalize.css", "css/pygment_highlights.css", "feed.xml", "img/avatar-icon.png", "js/bootstrap.js", "js/bootstrap.min.js", "js/jquery-1.11.2.min.js", "js/main.js"},
-			`css/(bootstrap(-theme(\.min)?|\.min)?|main|normalize|pygment_highlights).css|feed\.xml|img/avatar-icon\.png|js/(bootstrap(\.min)?|jquery-1\.11\.2\.min|main).js`},
-		// `css/(bootstrap(-theme(\.min)?|\.min)?|normalize|main|pygment_highlights).css|img/avatar-icon\.png|feed\.xml|js/(bootstrap(\.min)?|main|jquery-1\.11\.2\.min).js`}, // Ideal
+			`feed\.xml|img/avatar-icon\.png|css/(main|normalize|pygment_highlights|bootstrap(-theme)?(\.min)?)\.css|js/(jquery-1\.11\.2\.min|main|bootstrap(\.min)?)\.js`},
 	} {
 		if got := ShortRegexpString(test.in...); got != test.out {
 			t.Errorf("expected:\n\t%#q,\ngot\n\t%#q for\n\t%v", test.out, got, test.in)
