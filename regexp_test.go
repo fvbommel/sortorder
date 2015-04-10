@@ -8,13 +8,16 @@ func TestShortRegexpString(t *testing.T) {
 		out string
 	}{
 		{[]string{"abc", "def"}, "abc|def"},
-		{[]string{"abcf", "abde"}, "ab(de|cf)"},
-		{[]string{"abcdefabcf", "abcdefabde", "abc"}, "abc(defab(de|cf))?"},
+		{[]string{"abc", "def", "abc"}, "abc|def"},
+		{[]string{"abccf", "abcde"}, "abc(cf|de)"},
+		{[]string{"abcdefabcf", "abcdefabde", "abc"}, "abc(defab(cf|de))?"},
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css"},
-			`css/bootstrap((-theme(\.min)?|\.min)?.css)`},
-		// `css/bootstrap(-theme)?(\.min)?.css)`},	// Ideal
+			`css/bootstrap(-theme(\.min)?|\.min)?.css`},
+		// `css/bootstrap(-theme)?(\.min)?.css)`}, // Ideal
+		{[]string{`bootstrap-theme`, `main`, `normalize`, `bootstrap-theme.min`, `bootstrap.min`, `bootstrap`, `pygment_highlights`},
+			`bootstrap(-theme(\.min)?|\.min)?|main|normalize|pygment_highlights`},
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css", "css/main.css", "css/normalize.css", "css/pygment_highlights.css", "feed.xml", "img/avatar-icon.png", "js/bootstrap.js", "js/bootstrap.min.js", "js/jquery-1.11.2.min.js", "js/main.js"},
-			`css/((bootstrap(-theme(\.min)?|\.min)?|normalize|main|pygment_highlights).css)|img/avatar-icon\.png|feed\.xml|js/((bootstrap(\.min)?|main|jquery-1\.11\.2\.min).js)`},
+			`css/(bootstrap(-theme(\.min)?|\.min)?|main|normalize|pygment_highlights).css|feed\.xml|img/avatar-icon\.png|js/(bootstrap(\.min)?|jquery-1\.11\.2\.min|main).js`},
 		// `css/(bootstrap(-theme(\.min)?|\.min)?|normalize|main|pygment_highlights).css|img/avatar-icon\.png|feed\.xml|js/(bootstrap(\.min)?|main|jquery-1\.11\.2\.min).js`}, // Ideal
 	} {
 		if got := ShortRegexpString(test.in...); got != test.out {

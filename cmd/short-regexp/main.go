@@ -1,3 +1,5 @@
+// short-regexp is a command-line utility that reads strings from standard input
+// (one per line) and outputs a regexp that matches only those strings.
 package main
 
 import (
