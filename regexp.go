@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -91,7 +90,8 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 			middle = optional(middle[1:])
 			singleClause = true
 		} else if len(middle) > 1 && !singleClause {
-			middle = fmt.Sprintf("(%s)", middle)
+			middle = "(" + middle + ")"
+			singleClause = true
 		}
 
 		prefix, suffix = regexp.QuoteMeta(prefix), regexp.QuoteMeta(suffix)
@@ -129,7 +129,7 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 	sort.Sort(reverseStrings(vs))
 	vs = removeDups(vs)
 	// debugf("Reverse-sorted: %#q", vs)
-	for suffix, sufLoc := range commonSuffixes(vs, 2) {
+	for suffix, sufLoc := range commonSuffixes(vs, 1) {
 		// sufLoc := suffixes[suffix]
 		prefix := sharedPrefix(len(suffix), vs[sufLoc.start:sufLoc.end])
 		str, single := recurse(prefix, suffix, sufLoc)
@@ -146,7 +146,7 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 
 	sort.Strings(vs)
 	// debugf("Sorted: %#q", vs)
-	for prefix, preLoc := range commonPrefixes(vs, 2) {
+	for prefix, preLoc := range commonPrefixes(vs, 1) {
 		suffix := sharedSuffix(len(prefix), vs[preLoc.start:preLoc.end])
 		str, single := recurse(prefix, suffix, preLoc)
 		if len(str) < bestCost || (len(str) == bestCost && str < best) {
@@ -157,6 +157,83 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 		} else {
 			//debugf("! rejected %#q", str)
 			//debugf("  because: %#q", best)
+		}
+	}
+
+	singleChar := true
+	optional := ""
+	for i := range vs {
+		if len(vs[i]) == 0 {
+			optional = "?"
+		} else if len(vs[i]) != 1 {
+			// FIXME: should allow single non-ASCII characters
+			singleChar = false
+			break
+		}
+	}
+	if singleChar {
+		// Construct an array of characters in the right order:
+		//   ']' first, '-' last, rest alphabetically
+		class := make([]byte, 0, len(vs))
+		last := ""
+		for i, s := range vs {
+			if s == "]" {
+				// Must be first
+				class = append(class, ']')
+				vs[i] = "" // delete
+			} else if s == "-" {
+				// Must be last
+				last = s
+				vs[i] = "" // delete
+			}
+		}
+		sortFirst := len(class)
+		for _, s := range vs {
+			class = append(class, s...)
+		}
+		sort.Sort(sortBytes(class[sortFirst:]))
+		class = append(class, last...)
+
+		// Collapse character ranges
+		w := 0
+		first := -1
+		for i := 0; i < len(class); i++ {
+			if first >= 0 {
+				// Do we need to finish the range?
+				if class[i] != class[i-1]+1 {
+					// Does it pay to use a range?
+					if i-first > 3 {
+						// Build a range
+						class[w-(i-first-1)] = '-'
+						class[w-(i-first-1)+1] = class[i-1]
+						// Rewind the write position
+						w = w - (i - first - 1) + 2
+						first = i
+					}
+				}
+			} else {
+				first = i
+			}
+			// Write the current character
+			class[w] = class[i]
+			w++
+		}
+		class = class[:w]
+
+		if len(class) == 1 {
+			str := regexp.QuoteMeta(string(class)) + optional
+			if len(str) <= bestCost {
+				bestCost = len(str)
+				best = str
+				bestSingle = true
+				found = true
+			}
+		}
+		if cost := len(class) + 2 + len(optional); cost <= bestCost {
+			bestCost = cost
+			best = "[" + string(class) + "]" + optional
+			bestSingle = true
+			found = true
 		}
 	}
 
@@ -173,7 +250,7 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 
 func optional(s string) string {
 	if len(s) > 1 {
-		s = fmt.Sprintf("(%s)?", s)
+		s = "(" + s + ")?"
 	} else if s != "" {
 		s += "?"
 	}
@@ -209,6 +286,35 @@ func keys(m map[string]commonSs) (result []string) {
 	sort.Strings(result)
 	return result
 }
+
+// reverseStrings is a sort.Interface that sort strings by their reverse values.
+type reverseStrings []string
+
+func (rs reverseStrings) Less(i, j int) bool {
+	for m, n := len(rs[i])-1, len(rs[j])-1; m >= 0 && n >= 0; m, n = m-1, n-1 {
+		if rs[i][m] != rs[j][n] {
+			// We want to compare runes, not bytes. So find the start of the
+			// current runes and decode them.
+			for ; m > 0 && !utf8.RuneStart(rs[i][m]); m-- {
+			}
+			for ; n > 0 && !utf8.RuneStart(rs[j][n]); n-- {
+			}
+			ri, _ := utf8.DecodeRuneInString(rs[i][m:])
+			rj, _ := utf8.DecodeRuneInString(rs[j][n:])
+			return ri < rj
+		}
+	}
+	return len(rs[i]) < len(rs[j])
+}
+func (rs reverseStrings) Swap(i, j int) { rs[i], rs[j] = rs[j], rs[i] }
+func (rs reverseStrings) Len() int      { return len(rs) }
+
+// sortBytes is a sort.Interface that sort bytes.
+type sortBytes []byte
+
+func (sb sortBytes) Less(i, j int) bool { return sb[i] < sb[j] }
+func (sb sortBytes) Swap(i, j int)      { sb[i], sb[j] = sb[j], sb[i] }
+func (sb sortBytes) Len() int           { return len(sb) }
 
 // commonSs holds information on where to find a common substring.
 type commonSs struct {
@@ -267,28 +373,6 @@ func prefixEnd(vs []string, prefix string) int {
 		return !strings.HasPrefix(s, prefix)
 	})
 }
-
-// reverseStrings is a sort.Interface that sort strings by their reverse values.
-type reverseStrings []string
-
-func (rs reverseStrings) Less(i, j int) bool {
-	for m, n := len(rs[i])-1, len(rs[j])-1; m >= 0 && n >= 0; m, n = m-1, n-1 {
-		if rs[i][m] != rs[j][n] {
-			// We want to compare runes, not bytes. So find the start of the
-			// current runes and decode them.
-			for ; m > 0 && !utf8.RuneStart(rs[i][m]); m-- {
-			}
-			for ; n > 0 && !utf8.RuneStart(rs[j][n]); n-- {
-			}
-			ri, _ := utf8.DecodeRuneInString(rs[i][m:])
-			rj, _ := utf8.DecodeRuneInString(rs[j][n:])
-			return ri < rj
-		}
-	}
-	return len(rs[i]) < len(rs[j])
-}
-func (rs reverseStrings) Swap(i, j int) { rs[i], rs[j] = rs[j], rs[i] }
-func (rs reverseStrings) Len() int      { return len(rs) }
 
 // commonSuffixes returns a map from suffixes to number of occurrences. Not all
 // strings in vs need to have a suffix for it to be returned.
@@ -402,12 +486,17 @@ func sharedSuffix(ignore int, vs []string) (result string) {
 	case 1:
 		return vs[0]
 	}
-	for i := 0; i < len(vs[0])-ignore; i++ {
+	first := vs[0]
+	for i := 0; i < len(first)-ignore; i++ {
 		for n := 1; n < len(vs); n++ {
-			if i >= len(vs[n])-ignore || vs[0][len(vs[0])-i-1] != vs[n][len(vs[n])-i-1] {
-				return vs[0][len(vs[0])-i:]
+			cur := vs[n]
+			if i == len(cur)-ignore {
+				return cur[ignore:]
+			}
+			if first[len(first)-i-1] != cur[len(cur)-i-1] {
+				return first[len(first)-i:]
 			}
 		}
 	}
-	return vs[0][ignore:]
+	return first[ignore:]
 }

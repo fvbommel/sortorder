@@ -2,7 +2,7 @@ package util
 
 import "testing"
 
-// TODO: make these tests less ordering-dependent.
+// TODO: make these tests less ordering-dependent. (Or guarantee an order in OR-clauses?)
 
 func TestShortRegexpString(t *testing.T) {
 	for _, test := range []struct {
@@ -11,6 +11,14 @@ func TestShortRegexpString(t *testing.T) {
 	}{
 		{[]string{"abc", "def"}, "abc|def"},
 		{[]string{"abc", "def", "abc"}, "abc|def"},
+		{[]string{"a", ""}, "a?"},
+		{[]string{"a", "e"}, "a|e"},
+		{[]string{"man", "men", "min"}, "m[aei]n"},
+		{[]string{"man", "men", "min", "mon"}, "m[aeio]n"},
+		{[]string{"man", "men", "min", "mn"}, "m[aei]?n"},
+		{[]string{"man", "mbn", "mcn", "mdn", "mfn", "mgn"}, "m[a-dfg]n"},
+		{[]string{"man", "mbn", "mcn", "mn", "mfn", "mgn"}, "m[abcfg]?n"},
+		{[]string{"mbn", "mn", "mfn", "mcn", "man", "mgn"}, "m[abcfg]?n"},
 		{[]string{"abccf", "abcde"}, "abc(cf|de)"},
 		{[]string{"abcdefabcf", "abcdefabde", "abc"}, "abc(defab(cf|de))?"},
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css"},
