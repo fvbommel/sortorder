@@ -24,7 +24,7 @@ func TestStringSort(t *testing.T) {
 	}
 	sort.Sort(Natural(b))
 	if !reflect.DeepEqual(a, b) {
-		t.Errorf("Error: sort failed, expected: %v, got: %v", a, b)
+		t.Errorf("Error: sort failed, expected: %#q, got: %#q", a, b)
 	}
 }
 
@@ -64,11 +64,11 @@ func TestNaturalLess(t *testing.T) {
 	}
 	for _, v := range testset {
 		if res := NaturalLess(v.s1, v.s2); res != v.less {
-			t.Errorf("Compared %s to %s: expected %v, got %v",
+			t.Errorf("Compared %#q to %#q: expected %v, got %v",
 				v.s1, v.s2, v.less, res)
 		}
 		if res := handysort.StringLess(v.s1, v.s2); res != v.less {
-			t.Logf("handysort: Compared %s to %s: expected %v, got %v",
+			t.Logf("handysort: Compared %#q to %#q: expected %v, got %v",
 				v.s1, v.s2, v.less, res)
 		}
 	}
