@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fvbommel/util"
+	"vbom.ml/util"
 )
 
 func main() {
