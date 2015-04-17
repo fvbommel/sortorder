@@ -6,6 +6,8 @@ package sortorder
 // Non-digit sequences and numbers are compared separately. The former are
 // compared bytewise, while the latter are compared numerically (except that
 // the number of leading zeros is used as a tie-breaker, so e.g. "2" < "02")
+//
+// Limitation: only ASCII digits (0-9) are considered.
 type Natural []string
 
 func (n Natural) Len() int           { return len(n) }
@@ -20,6 +22,8 @@ func isdigit(b byte) bool { return '0' <= b && b <= '9' }
 // Non-digit sequences and numbers are compared separately. The former are
 // compared bytewise, while the latter are compared numerically (except that
 // the number of leading zeros is used as a tie-breaker, so e.g. "2" < "02")
+//
+// Limitation: only ASCII digits (0-9) are considered.
 func NaturalLess(str1, str2 string) bool {
 	idx1, idx2 := 0, 0
 	for idx1 < len(str1) && idx2 < len(str2) {
@@ -29,7 +33,8 @@ func NaturalLess(str1, str2 string) bool {
 		case dig1 != dig2: // Digits before other characters.
 			return dig1 // True if LHS is a digit, false if the RHS is one.
 		case !dig1: // && !dig2, because dig1 == dig2
-			// UTF-8 compares bytewise-lexicographically, no need to decode codepoints.
+			// UTF-8 compares bytewise-lexicographically, no need to decode
+			// codepoints.
 			if c1 != c2 {
 				return c1 < c2
 			}
@@ -37,7 +42,6 @@ func NaturalLess(str1, str2 string) bool {
 			idx2++
 		default: // Digits
 			// Eat zeros.
-			start1, start2 := idx1, idx2
 			for ; idx1 < len(str1) && str1[idx1] == '0'; idx1++ {
 			}
 			for ; idx2 < len(str2) && str2[idx2] == '0'; idx2++ {
@@ -48,7 +52,8 @@ func NaturalLess(str1, str2 string) bool {
 			}
 			for ; idx2 < len(str2) && isdigit(str2[idx2]); idx2++ {
 			}
-			// If lengths of numbers with non-zero prefix differ, the shorter one is less.
+			// If lengths of numbers with non-zero prefix differ, the shorter
+			// one is less.
 			if len1, len2 := idx1-nonZero1, idx2-nonZero2; len1 != len2 {
 				return len1 < len2
 			}
@@ -57,12 +62,15 @@ func NaturalLess(str1, str2 string) bool {
 				return nr1 < nr2
 			}
 			// Otherwise, the one with less zeros is less.
-			if nZeros1, nZeros2 := nonZero1-start1, nonZero2-start2; nZeros1 != nZeros2 {
-				return nZeros1 < nZeros2
+			// Because everything up to the number is equal, comparing the index
+			// after the zeros is sufficient.
+			if nonZero1 != nonZero2 {
+				return nonZero1 < nonZero2
 			}
-			// If they're identical, continue comparing.
 		}
+		// They're identical so far, so continue comparing.
 	}
-	// Compare by remaining length (one of these is zero)
-	return len(str1)-idx1 < len(str2)-idx2
+	// So far they are identical. At least one is ended. If the other continues,
+	// it sorts last.
+	return len(str1) < len(str2)
 }
