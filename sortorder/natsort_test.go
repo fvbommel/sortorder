@@ -103,8 +103,10 @@ func BenchmarkStringSort(b *testing.B) {
 	arr := make([]string, len(set[0]))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		copy(arr, set[b.N%1000])
-		sort.Strings(arr)
+		for _, list := range set {
+			copy(arr, list)
+			sort.Strings(arr)
+		}
 	}
 }
 
@@ -113,8 +115,10 @@ func BenchmarkUtilStringSort(b *testing.B) {
 	arr := make([]string, len(set[0]))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		copy(arr, set[b.N%1000])
-		sort.Sort(Natural(arr))
+		for _, list := range set {
+			copy(arr, list)
+			sort.Sort(Natural(arr))
+		}
 	}
 }
 
@@ -123,8 +127,10 @@ func BenchmarkHandyStringSort(b *testing.B) {
 	arr := make([]string, len(set[0]))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		copy(arr, set[b.N%1000])
-		sort.Sort(handysort.Strings(arr))
+		for _, list := range set {
+			copy(arr, list)
+			sort.Sort(handysort.Strings(arr))
+		}
 	}
 }
 
@@ -132,8 +138,10 @@ func BenchmarkStringLess(b *testing.B) {
 	set := testSet(300)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		n := b.N % 999
-		_ = handysort.StringLess(set[n][0], set[n+1][1])
+		for j := range set[0] {
+			k := (j + 1) % len(set[0])
+			_ = handysort.StringLess(set[0][j], set[0][k])
+		}
 	}
 }
 
@@ -141,8 +149,10 @@ func BenchmarkNaturalLess(b *testing.B) {
 	set := testSet(300)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		n := b.N % 999
-		_ = NaturalLess(set[n][0], set[n+1][1])
+		for j := range set[0] {
+			k := (j + 1) % len(set[0])
+			_ = NaturalLess(set[0][j], set[0][k])
+		}
 	}
 }
 
