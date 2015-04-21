@@ -277,16 +277,6 @@ func dup(vs []string) []string {
 	return result
 }
 
-// keys returns a sorted array of keys.
-func keys(m map[string]commonSs) (result []string) {
-	result = make([]string, 0, len(m))
-	for k := range m {
-		result = append(result, k)
-	}
-	sort.Strings(result)
-	return result
-}
-
 // reverseStrings is a sort.Interface that sort strings by their reverse values.
 type reverseStrings []string
 
