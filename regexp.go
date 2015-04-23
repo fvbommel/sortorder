@@ -16,11 +16,17 @@ var level = 0
 // ShortRegexpString tries to construct a short regexp that matches exactly the
 // provided strings and nothing else.
 func ShortRegexpString(vs ...string) (res string) {
-	res, _ = shortRegexpString(dup(vs))
+	cache := make(map[string]regexpCacheEntry)
+	res, _ = shortRegexpString(vs, cache)
 	return res
 }
 
-func shortRegexpString(vs []string) (res string, singleClause bool) {
+type regexpCacheEntry struct {
+	res          string
+	singleClause bool
+}
+
+func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res string, singleClause bool) {
 	switch len(vs) {
 	case 0:
 		return "$.^", true // Unmatchable?
@@ -33,6 +39,26 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 	// 	level--
 	// 	debugf("ShortRegexpString(%s) = %#q, %v", s, res, singleClause)
 	// }(fmt.Sprintf("%#q", vs))
+
+	// Canonicalize
+	sort.Strings(vs)
+	vs = removeDups(vs)
+
+	// The one to beat: just put ORs between them (after escaping meta-characters)
+	us := make([]string, len(vs))
+	for i := range vs {
+		us[i] = regexp.QuoteMeta(vs[i])
+	}
+	best := strings.Join(us, "|")
+	bestSingle := false
+	bestCost := len(best)
+
+	if cached, ok := cache[best]; ok {
+		return cached.res, cached.singleClause
+	}
+	defer func(key string) {
+		cache[key] = regexpCacheEntry{res, singleClause}
+	}(best)
 
 	recurse := func(prefix, suffix string, data commonSs) (result string, singleClause bool) {
 		// debugf("> recurse(%#q, %#q, %v) on %#q", prefix, suffix, data, vs)
@@ -84,7 +110,7 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 			copy(others[data.start:], vs[data.end:])
 		}
 
-		middle, singleClause := shortRegexpString(varying)
+		middle, singleClause := shortRegexpString(varying, cache)
 		// debugf(">> ShortRegexpString(%#q) = %#q", varying, middle)
 		if strings.HasPrefix(middle, "|") {
 			middle = optional(middle[1:])
@@ -104,7 +130,7 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 			result = prefix + middle + suffix
 		}
 		if len(others) > 0 {
-			str, _ := shortRegexpString(others)
+			str, _ := shortRegexpString(others, cache)
 			if strings.HasPrefix(str, "|") {
 				str = optional(str[1:])
 			}
@@ -116,18 +142,22 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 		return result, singleClause
 	}
 
-	// The length of a naive solution: N strings plus N-1 separators.
-	bestCost := -1
-	for _, v := range vs {
-		bestCost += len(regexp.QuoteMeta(v)) + 1
+	// Note that vs is still sorted here.
+	// debugf("Sorted: %#q", vs)
+	for prefix, preLoc := range commonPrefixes(vs, 1) {
+		suffix := sharedSuffix(len(prefix), vs[preLoc.start:preLoc.end])
+		str, single := recurse(prefix, suffix, preLoc)
+		if len(str) < bestCost || (len(str) == bestCost && str < best) {
+			bestCost = len(str)
+			best = str
+			bestSingle = single
+		} else {
+			//debugf("! rejected %#q", str)
+			//debugf("  because: %#q", best)
+		}
 	}
-	best := ""
-	bestSingle := false
-
-	found := false
 
 	sort.Sort(reverseStrings(vs))
-	vs = removeDups(vs)
 	// debugf("Reverse-sorted: %#q", vs)
 	for suffix, sufLoc := range commonSuffixes(vs, 1) {
 		// sufLoc := suffixes[suffix]
@@ -137,23 +167,6 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 			bestCost = len(str)
 			best = str
 			bestSingle = single
-			found = true
-		} else {
-			//debugf("! rejected %#q", str)
-			//debugf("  because: %#q", best)
-		}
-	}
-
-	sort.Strings(vs)
-	// debugf("Sorted: %#q", vs)
-	for prefix, preLoc := range commonPrefixes(vs, 1) {
-		suffix := sharedSuffix(len(prefix), vs[preLoc.start:preLoc.end])
-		str, single := recurse(prefix, suffix, preLoc)
-		if len(str) < bestCost || (len(str) == bestCost && str < best) {
-			bestCost = len(str)
-			best = str
-			bestSingle = single
-			found = true
 		} else {
 			//debugf("! rejected %#q", str)
 			//debugf("  because: %#q", best)
@@ -226,26 +239,16 @@ func shortRegexpString(vs []string) (res string, singleClause bool) {
 				bestCost = len(str)
 				best = str
 				bestSingle = true
-				found = true
 			}
 		}
 		if cost := len(class) + 2 + len(optional); cost <= bestCost {
 			bestCost = cost
 			best = "[" + string(class) + "]" + optional
 			bestSingle = true
-			found = true
 		}
 	}
 
-	if found {
-		return best, bestSingle
-	}
-
-	// Last resort: Just put ORs between them (after escaping meta-characters)
-	for i := range vs {
-		vs[i] = regexp.QuoteMeta(vs[i])
-	}
-	return strings.Join(vs, "|"), false
+	return best, bestSingle
 }
 
 func optional(s string) string {
