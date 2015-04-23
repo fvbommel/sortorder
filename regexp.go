@@ -51,7 +51,6 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 	}
 	best := strings.Join(us, "|")
 	bestSingle := false
-	bestCost := len(best)
 
 	if cached, ok := cache[best]; ok {
 		return cached.res, cached.singleClause
@@ -147,8 +146,7 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 	for prefix, preLoc := range commonPrefixes(vs, 1) {
 		suffix := sharedSuffix(len(prefix), vs[preLoc.start:preLoc.end])
 		str, single := recurse(prefix, suffix, preLoc)
-		if len(str) < bestCost || (len(str) == bestCost && str < best) {
-			bestCost = len(str)
+		if len(str) < len(best) || (len(str) == len(best) && str < best) {
 			best = str
 			bestSingle = single
 		} else {
@@ -163,8 +161,7 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 		// sufLoc := suffixes[suffix]
 		prefix := sharedPrefix(len(suffix), vs[sufLoc.start:sufLoc.end])
 		str, single := recurse(prefix, suffix, sufLoc)
-		if len(str) < bestCost || (len(str) == bestCost && str < best) {
-			bestCost = len(str)
+		if len(str) < len(best) || (len(str) == len(best) && str < best) {
 			best = str
 			bestSingle = single
 		} else {
@@ -235,14 +232,12 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 
 		if len(class) == 1 {
 			str := regexp.QuoteMeta(string(class)) + optional
-			if len(str) <= bestCost {
-				bestCost = len(str)
+			if len(str) <= len(best) {
 				best = str
 				bestSingle = true
 			}
 		}
-		if cost := len(class) + 2 + len(optional); cost <= bestCost {
-			bestCost = cost
+		if cost := len(class) + 2 + len(optional); cost <= len(best) {
 			best = "[" + string(class) + "]" + optional
 			bestSingle = true
 		}
