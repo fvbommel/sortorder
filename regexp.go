@@ -15,6 +15,8 @@ var level = 0
 
 // ShortRegexpString tries to construct a short regexp that matches exactly the
 // provided strings and nothing else.
+//
+// Warning: the current implementation may use a lot of time of memory.
 func ShortRegexpString(vs ...string) (res string) {
 	cache := make(map[string]regexpCacheEntry)
 	res, _ = shortRegexpString(vs, cache)
