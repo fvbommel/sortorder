@@ -2,10 +2,9 @@ package util
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 )
-
-// TODO: make these tests less ordering-dependent. (Or guarantee an order in OR-clauses?)
 
 func TestShortRegexpString(t *testing.T) {
 	for _, test := range []struct {
@@ -27,13 +26,24 @@ func TestShortRegexpString(t *testing.T) {
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css"},
 			`css/bootstrap(-theme)?(\.min)?\.css`},
 		{[]string{`bootstrap-theme`, `main`, `normalize`, `bootstrap-theme.min`, `bootstrap.min`, `bootstrap`, `pygment_highlights`},
-			`main|normalize|pygment_highlights|bootstrap(-theme)?(\.min)?`},
+			`bootstrap(-theme)?(\.min)?|main|normalize|pygment_highlights`},
 		{[]string{"css/bootstrap.css", "css/bootstrap.min.css", "css/bootstrap-theme.css", "css/bootstrap-theme.min.css", "css/main.css", "css/normalize.css", "css/pygment_highlights.css", "feed.xml", "img/avatar-icon.png", "js/bootstrap.js", "js/bootstrap.min.js", "js/jquery-1.11.2.min.js", "js/main.js"},
-			`feed\.xml|img/avatar-icon\.png|css/(main|normalize|pygment_highlights|bootstrap(-theme)?(\.min)?)\.css|js/((jquery-1\.11\.2\.m|ma)in|bootstrap(\.min)?)\.js`},
+			`css/(bootstrap(-theme)?(\.min)?|main|normalize|pygment_highlights)\.css|feed\.xml|img/avatar-icon\.png|js/(bootstrap(\.min)?|jquery-1\.11\.2\.min|main)\.js`},
 	} {
 		input := fmt.Sprintf("%#q", test.in)
-		if got := ShortRegexpString(test.in...); got != test.out {
+		got := ShortRegexpString(test.in...)
+		if got != test.out {
 			t.Errorf("expected:\n\t%#q,\ngot\n\t%#q for\n\t%s", test.out, got, input)
+		}
+		re, err := regexp.Compile("^(" + got + ")$")
+		if err != nil {
+			t.Errorf("regexp compile failure: %q\n\tfor %#q", err, got)
+		} else {
+			for _, str := range test.in {
+				if !re.MatchString(str) {
+					t.Errorf("regexp does not match input %#q:\n\t%#q", str, got)
+				}
+			}
 		}
 	}
 }

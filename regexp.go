@@ -18,22 +18,23 @@ var level = 0
 //
 // Warning: the current implementation may use a lot of time of memory.
 func ShortRegexpString(vs ...string) (res string) {
-	cache := make(map[string]regexpCacheEntry)
-	res, _ = shortRegexpString(vs, cache)
-	return res
+	cache := make(map[string][]string)
+	return render(shortRegexpString(vs, cache), false)
 }
 
-type regexpCacheEntry struct {
-	res          string
-	singleClause bool
-}
+func shortRegexpString(vs []string, cache map[string][]string) (res []string) {
+	// Canonicalize (might turn the input into one of the trivial cases below)
+	if len(vs) > 1 {
+		sort.Strings(vs)
+		vs = removeDups(vs)
+	}
 
-func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res string, singleClause bool) {
+	// Trivial cases.
 	switch len(vs) {
 	case 0:
-		return "$.^", true // Unmatchable?
+		return nil
 	case 1:
-		return regexp.QuoteMeta(vs[0]), true // Nothing else to do.
+		return []string{regexp.QuoteMeta(vs[0])} // Nothing else to do.
 	}
 
 	// level++
@@ -42,26 +43,25 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 	// 	debugf("ShortRegexpString(%s) = %#q, %v", s, res, singleClause)
 	// }(fmt.Sprintf("%#q", vs))
 
-	// Canonicalize
-	sort.Strings(vs)
-	vs = removeDups(vs)
-
 	// The one to beat: just put ORs between them (after escaping meta-characters)
-	us := make([]string, len(vs))
+	best := make([]string, len(vs))
 	for i := range vs {
-		us[i] = regexp.QuoteMeta(vs[i])
+		best[i] = regexp.QuoteMeta(vs[i])
 	}
-	best := strings.Join(us, "|")
-	bestSingle := false
 
-	if cached, ok := cache[best]; ok {
-		return cached.res, cached.singleClause
+	cacheKey := render(best, false)
+	bestCost := len(cacheKey)
+
+	if cached, ok := cache[cacheKey]; ok {
+		return cached
 	}
 	defer func(key string) {
-		cache[key] = regexpCacheEntry{res, singleClause}
-	}(best)
+		// Put clauses in a canonical order and cache them.
+		sort.Strings(res)
+		cache[key] = res
+	}(cacheKey)
 
-	recurse := func(prefix, suffix string, data commonSs) (result string, singleClause bool) {
+	recurse := func(prefix, suffix string, data commonSs) (result []string) {
 		// debugf("> recurse(%#q, %#q, %v) on %#q", prefix, suffix, data, vs)
 
 		//debugf("%v/%#q/%#q: %v\n", vs, prefix, suffix, data)
@@ -111,46 +111,30 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 			copy(others[data.start:], vs[data.end:])
 		}
 
-		middle, singleClause := shortRegexpString(varying, cache)
+		middle := render(shortRegexpString(varying, cache), true)
 		// debugf(">> ShortRegexpString(%#q) = %#q", varying, middle)
-		if strings.HasPrefix(middle, "|") {
-			middle = optional(middle[1:])
-			singleClause = true
-		} else if len(middle) > 1 && !singleClause {
-			middle = "(" + middle + ")"
-			singleClause = true
-		}
 
 		prefix, suffix = regexp.QuoteMeta(prefix), regexp.QuoteMeta(suffix)
+		var cur string
 		switch {
 		case allExist && prefix == "": // M . S | M ==> M . S?
-			result = middle + optional(suffix)
+			cur = middle + optional(suffix)
 		case allExist && suffix == "": // P . M | M ==> P? . M
-			result = optional(prefix) + middle
+			cur = optional(prefix) + middle
 		default:
-			result = prefix + middle + suffix
+			cur = prefix + middle + suffix
 		}
-		if len(others) > 0 {
-			str, _ := shortRegexpString(others, cache)
-			if strings.HasPrefix(str, "|") {
-				str = optional(str[1:])
-			}
-			// debugf("## ShortRegexpString(%#q) = %#q", others, str)
-			result = str + "|" + result
-			singleClause = false
-		}
-
-		return result, singleClause
+		return append([]string{cur}, shortRegexpString(others, cache)...)
 	}
 
 	// Note that vs is still sorted here.
 	// debugf("Sorted: %#q", vs)
 	for prefix, preLoc := range commonPrefixes(vs, 1) {
 		suffix := sharedSuffix(len(prefix), vs[preLoc.start:preLoc.end])
-		str, single := recurse(prefix, suffix, preLoc)
-		if len(str) < len(best) || (len(str) == len(best) && str < best) {
-			best = str
-			bestSingle = single
+		strs := recurse(prefix, suffix, preLoc)
+		if c := cost(strs); c < bestCost { // || (c == len(best) && str < best) {
+			best = strs
+			bestCost = c
 		} else {
 			//debugf("! rejected %#q", str)
 			//debugf("  because: %#q", best)
@@ -162,10 +146,10 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 	for suffix, sufLoc := range commonSuffixes(vs, 1) {
 		// sufLoc := suffixes[suffix]
 		prefix := sharedPrefix(len(suffix), vs[sufLoc.start:sufLoc.end])
-		str, single := recurse(prefix, suffix, sufLoc)
-		if len(str) < len(best) || (len(str) == len(best) && str < best) {
-			best = str
-			bestSingle = single
+		strs := recurse(prefix, suffix, sufLoc)
+		if c := cost(strs); c < bestCost { //|| (len(str) == len(best) && str < best) {
+			best = strs
+			bestCost = c
 		} else {
 			//debugf("! rejected %#q", str)
 			//debugf("  because: %#q", best)
@@ -234,18 +218,46 @@ func shortRegexpString(vs []string, cache map[string]regexpCacheEntry) (res stri
 
 		if len(class) == 1 {
 			str := regexp.QuoteMeta(string(class)) + optional
-			if len(str) <= len(best) {
-				best = str
-				bestSingle = true
+			if len(str) <= bestCost {
+				best = []string{str}
+				bestCost = len(str)
 			}
 		}
-		if cost := len(class) + 2 + len(optional); cost <= len(best) {
-			best = "[" + string(class) + "]" + optional
-			bestSingle = true
+		if cost := len(class) + 2 + len(optional); cost <= bestCost {
+			best = []string{"[" + string(class) + "]" + optional}
+			bestCost = cost
 		}
 	}
 
-	return best, bestSingle
+	return best
+}
+
+func render(clauses []string, asSingle bool) string {
+	switch len(clauses) {
+	case 0:
+		return "$.^" // Unmatchable?
+	case 1:
+		return clauses[0]
+	default:
+		if len(clauses[0]) == 0 {
+			clauses = clauses[1:]
+			if len(clauses) == 1 {
+				return optional(clauses[0])
+			}
+			return render(clauses, true) + "?"
+		}
+
+		result := strings.Join(clauses, "|")
+		if asSingle {
+			result = "(" + result + ")"
+		}
+		return result
+	}
+}
+
+func cost(clauses []string) int {
+	// TODO: real implementation
+	return len(render(clauses, false))
 }
 
 func optional(s string) string {
