@@ -9,6 +9,8 @@ import (
 
 var level = 0
 
+// func init() { log.SetFlags(0) }
+//
 // func debugf(f string, vs ...interface{}) {
 // 	log.Printf(strings.Repeat("  ", level)+f, vs...)
 // }
@@ -40,7 +42,7 @@ func shortRegexpString(vs []string, cache map[string][]string) (res []string) {
 	// level++
 	// defer func(s string) {
 	// 	level--
-	// 	debugf("ShortRegexpString(%s) = %#q, %v", s, res, singleClause)
+	// 	debugf("ShortRegexpString(%s) = %#q", s, res)
 	// }(fmt.Sprintf("%#q", vs))
 
 	// The one to beat: just put ORs between them (after escaping meta-characters)
@@ -63,6 +65,9 @@ func shortRegexpString(vs []string, cache map[string][]string) (res []string) {
 
 	recurse := func(prefix, suffix string, data commonSs) (result []string) {
 		// debugf("> recurse(%#q, %#q, %v) on %#q", prefix, suffix, data, vs)
+		// defer func() {
+		// 	debugf("  recurse(%#q, %#q, %v) on %#q = %#q", prefix, suffix, data, vs, result)
+		// }()
 
 		//debugf("%v/%#q/%#q: %v\n", vs, prefix, suffix, data)
 		varying := make([]string, data.end-data.start)
