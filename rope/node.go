@@ -74,13 +74,21 @@ func conc(lhs, rhs node, lhsLength, rhsLength int64) node {
 	if cc, ok := lhs.(*concat); ok {
 		ccrlen := cc.rLength()
 		if ccrlen+rhsLength <= concatThreshold {
-			return conc(cc.Left, conc(cc.Right, rhs, ccrlen, rhsLength), cc.Split, ccrlen+rhsLength)
+			return conc(
+				cc.Left,
+				conc(cc.Right, rhs, ccrlen, rhsLength),
+				cc.Split,
+				ccrlen+rhsLength)
 		}
 	}
 	// Re-associate small + (small+large) ==> (small+small) + large
 	if cc, ok := rhs.(*concat); ok {
 		if lhsLength+cc.Split <= concatThreshold {
-			return conc(conc(lhs, cc.Left, lhsLength, cc.Split), cc.Right, cc.Split, cc.rLength())
+			return conc(
+				conc(lhs, cc.Left, lhsLength, cc.Split),
+				cc.Right,
+				lhsLength+cc.Split,
+				cc.rLength())
 		}
 	}
 
