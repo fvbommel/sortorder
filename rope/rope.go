@@ -64,7 +64,7 @@ func (r Rope) Bytes() []byte {
 		return nil
 	}
 	buf := bytes.NewBuffer(make([]byte, 0, len))
-	r.WriteTo(buf)
+	_, _ = r.WriteTo(buf)
 	return buf.Bytes()
 }
 

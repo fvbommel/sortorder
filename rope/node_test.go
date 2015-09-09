@@ -83,6 +83,6 @@ func TestConcCoalesceRight(t *testing.T) {
 
 func flatten(n node) leaf {
 	buf := &bytes.Buffer{}
-	n.WriteTo(buf)
+	_, _ = n.WriteTo(buf)
 	return leaf(buf.String())
 }

@@ -34,7 +34,7 @@ func TestLeaf(t *testing.T) {
 	assert.Equal(t, leaf(""), v.dropPostfix(-100))
 
 	buf := bytes.NewBuffer(nil)
-	v.WriteTo(buf)
+	_, _ = v.WriteTo(buf)
 	assert.Equal(t, "foo", buf.String())
 
 	counter := 0

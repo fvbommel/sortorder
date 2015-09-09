@@ -64,8 +64,8 @@ func conc(lhs, rhs node, lhsLength, rhsLength int64) node {
 	// Optimize small + small
 	if lhsLength+rhsLength <= concatThreshold {
 		buf := bytes.NewBuffer(make([]byte, 0, lhsLength+rhsLength))
-		lhs.WriteTo(buf)
-		rhs.WriteTo(buf)
+		_, _ = lhs.WriteTo(buf)
+		_, _ = rhs.WriteTo(buf)
 		return leaf(buf.String())
 	}
 	// Re-associate (large+small) + small ==> large + (small+small)

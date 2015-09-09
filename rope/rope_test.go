@@ -26,7 +26,7 @@ func TestEmptyRope(t *testing.T) {
 		assert.Equal(t, "", r.Slice(0, 1).String())
 
 		buf := bytes.NewBuffer(nil)
-		r.WriteTo(buf)
+		_, _ = r.WriteTo(buf)
 		assert.Equal(t, 0, buf.Len())
 	}
 }
@@ -129,7 +129,7 @@ func TestBytes(t *testing.T) {
 
 func TestWriteTo(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	treeR.WriteTo(buf)
+	_, _ = treeR.WriteTo(buf)
 
 	assert.Equal(t, "123456abcdef", buf.String())
 }
@@ -195,7 +195,7 @@ func TestWalk(t *testing.T) {
 	defer disableCoalesce()()
 
 	for _, r := range []Rope{Rope{}, emptyRope} {
-		r.Walk(func(_ string) error {
+		_ = r.Walk(func(_ string) error {
 			t.Error("call to empty Rope's Walk parameter")
 			return nil
 		})

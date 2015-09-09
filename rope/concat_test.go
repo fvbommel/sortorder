@@ -154,7 +154,7 @@ func TestConcatDropPostfix(t *testing.T) {
 
 func TestConcatWriteTo(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-	tree.WriteTo(buf)
+	_, _ = tree.WriteTo(buf)
 	assert.Equal(t, string(lhs+rhs), buf.String())
 }
 

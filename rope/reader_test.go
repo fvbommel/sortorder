@@ -39,7 +39,7 @@ func TestReader(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	for _, test := range readerTests {
 		buf.Reset()
-		io.Copy(buf, NewReader(Rope{test.r}))
+		_, _ = io.Copy(buf, NewReader(Rope{test.r}))
 		assert.Equal(t, test.want, buf.String())
 	}
 }
