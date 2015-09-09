@@ -5,32 +5,30 @@ import (
 	"io"
 )
 
-type (
-	// The internal representation of a Rope.
-	node interface {
-		// A rope without subtrees is at depth 0, others at
-		// max(left.depth,right.depth) + 1
-		depth() depthT
-		length() int64
+// The internal representation of a Rope.
+type node interface {
+	// A rope without subtrees is at depth 0, others at
+	// max(left.depth,right.depth) + 1
+	depth() depthT
+	length() int64
 
-		at(idx int64) byte
+	at(idx int64) byte
 
-		// Slice returns a slice of the node.
-		slice(start, end int64) node
+	// Slice returns a slice of the node.
+	slice(start, end int64) node
 
-		dropPrefix(start int64) node
-		dropPostfix(end int64) node
+	dropPrefix(start int64) node
+	dropPostfix(end int64) node
 
-		io.WriterTo
+	io.WriterTo
 
-		// walkLeaves calls f on each leaf of the graph in order.
-		walkLeaves(f func(string) error) error
+	// walkLeaves calls f on each leaf of the graph in order.
+	walkLeaves(f func(string) error) error
 
-		readAt(p []byte, start int64) (n int)
-	}
+	readAt(p []byte, start int64) (n int)
+}
 
-	depthT uint32
-)
+type depthT uint32
 
 var emptyNode = node(leaf("")) // The canonical empty node.
 

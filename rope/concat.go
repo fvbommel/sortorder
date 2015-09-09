@@ -3,20 +3,18 @@ package rope
 import "io"
 
 // A node representing the concatenation of two smaller nodes.
-type (
-	concat struct {
-		// Subtrees. Neither may be nil or length zero.
-		Left, Right node
-		// Length of Left subtree. (relative index where the substrings meet)
-		Split int64
-		// Cached length of Right subtree, or 0 if out of range.
-		RLen rLenT
-		// Cached depth of the tree.
-		TreeDepth depthT
-	}
+type concat struct {
+	// Subtrees. Neither may be nil or length zero.
+	Left, Right node
+	// Length of Left subtree. (relative index where the substrings meet)
+	Split int64
+	// Cached length of Right subtree, or 0 if out of range.
+	RLen rLenT
+	// Cached depth of the tree.
+	TreeDepth depthT
+}
 
-	rLenT uint32
-)
+type rLenT uint32
 
 func (c *concat) depth() depthT { return c.TreeDepth }
 
