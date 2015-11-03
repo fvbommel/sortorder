@@ -6,7 +6,7 @@
 //
 // Rope values are immutable, so each operation returns its result instead
 // of modifying the receiver. This immutability also makes them thread-safe.
-package rope // import "vbom.ml/util/rope"
+package rope
 
 import (
 	"bytes"
