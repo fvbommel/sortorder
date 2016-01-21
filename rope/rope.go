@@ -10,6 +10,7 @@ package rope // import "vbom.ml/util/rope"
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -207,7 +208,7 @@ func (r Rope) Walk(f func(string) error) error {
 func (r Rope) ReadAt(p []byte, off int64) (n int, err error) {
 	expected := len(p)
 	if off < 0 {
-		panic("Rope.ReadAt: invalid offset")
+		return 0, errors.New("Rope.ReadAt: invalid offset")
 	}
 
 	if len(p) == 0 {
