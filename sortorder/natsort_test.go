@@ -223,7 +223,7 @@ func (g *generator) NextString() (str string) {
 		if i == numpos {
 			str += num
 		} else {
-			str += string('a' + g.src.Intn(16))
+			str += string('a' + rune(g.src.Intn(16)))
 		}
 	}
 	return str

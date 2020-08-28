@@ -33,7 +33,7 @@ func init() {
 	//~ n := New("a")
 
 	var r Rope
-	for i := 0; i < 100; i++ {
+	for i := rune(0); i < 100; i++ {
 		r = r.AppendString(string(' ' + i))
 	}
 	rebalanceTestRopes = append(rebalanceTestRopes, r)
