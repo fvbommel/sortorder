@@ -1,6 +1,6 @@
-## rope [![GoDoc](https://godoc.org/vbom.ml/util/rope?status.svg)](https://godoc.org/vbom.ml/util/rope)
+# rope [![GoDoc](https://godoc.org/github.com/fvbommel/util/rope?status.svg)](https://godoc.org/github.com/fvbommel/util/rope)
 
-    import "vbom.ml/util/rope"
+    import "github.com/fvbommel/util/rope"
 
 Package rope implements a "heavy-weight string", which represents very long strings more efficiently (especially when many concatenations are performed).
 

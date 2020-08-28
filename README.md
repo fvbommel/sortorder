@@ -1,5 +1,5 @@
-## util [![GoDoc](https://godoc.org/vbom.ml/util?status.svg)](https://godoc.org/vbom.ml/util)
+# util [![GoDoc](https://godoc.org/github.com/fvbommel/util?status.svg)](https://godoc.org/github.com/fvbommel/util)
 
-    import "vbom.ml/util"
+    import "github.com/fvbommel/util"
 
 Go utility packages.
