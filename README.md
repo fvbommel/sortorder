@@ -1,5 +1,5 @@
-# util [![GoDoc](https://godoc.org/github.com/fvbommel/util?status.svg)](https://godoc.org/github.com/fvbommel/util)
+# sortorder [![GoDoc](https://godoc.org/github.com/fvbommel/sortorder?status.svg)](https://godoc.org/github.com/fvbommel/sortorder)
 
-    import "github.com/fvbommel/util"
+    import "github.com/fvbommel/sortorder"
 
-Go utility packages.
+Sort orders and comparison functions.

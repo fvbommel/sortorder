@@ -1,2 +1,5 @@
-// Package util includes various small pieces of code.
-package util
+// Package sortorder implements sort orders and comparison functions.
+//
+// Currently, it only implements so-called "natural order", where integers
+// embedded in strings are compared by value.
+package sortorder
