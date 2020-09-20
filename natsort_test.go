@@ -9,19 +9,19 @@ import (
 )
 
 func TestStringSort(t *testing.T) {
-	a := []string{
+	want := []string{
 		"ab", "abc1",
 		"abc01", "abc2",
 		"abc5", "abc10",
 	}
-	b := []string{
+	got := []string{
 		"abc5", "abc1",
 		"abc01", "ab",
 		"abc10", "abc2",
 	}
-	sort.Sort(Natural(b))
-	if !reflect.DeepEqual(a, b) {
-		t.Errorf("Error: sort failed, expected: %#q, got: %#q", a, b)
+	sort.Sort(Natural(got))
+	if !reflect.DeepEqual(want, got) {
+		t.Errorf("Error: sort failed, expected: %#q, got: %#q", want, got)
 	}
 }
 
