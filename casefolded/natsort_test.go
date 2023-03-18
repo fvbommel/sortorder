@@ -225,7 +225,7 @@ func BenchmarkToUpperNaturalLess(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Upper-casing the strings is part of the algorithm
-		// when using standard '<' for case-insensitive comparisons.
+		// when using regular NaturalLess for case-insensitive comparisons.
 		arr := make([]string, len(set[0]))
 		for j, str := range set[0] {
 			arr[j] = strings.ToUpper(str)
