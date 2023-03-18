@@ -4,7 +4,7 @@ package sortorder
 // means that e.g. "abc2" < "abc12".
 //
 // Non-digit sequences and numbers are compared separately. The former are
-// compared bytewise, while the latter are compared numerically (except that
+// compared bytewise, while digits are compared numerically (except that
 // the number of leading zeros is used as a tie-breaker, so e.g. "2" < "02")
 //
 // Limitation: only ASCII digits (0-9) are considered.
@@ -20,7 +20,7 @@ func isDigit(b byte) bool { return '0' <= b && b <= '9' }
 // "abc2" < "abc12".
 //
 // Non-digit sequences and numbers are compared separately. The former are
-// compared bytewise, while the latter are compared numerically (except that
+// compared bytewise, while digits are compared numerically (except that
 // the number of leading zeros is used as a tie-breaker, so e.g. "2" < "02")
 //
 // Limitation: only ASCII digits (0-9) are considered.
