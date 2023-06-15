@@ -51,6 +51,8 @@ func TestNaturalLess(t *testing.T) {
 		//
 		{"082", "83", true},
 		{"9a", "083a", true},
+		// Special characters
+		{"!", "1", true},
 	}
 	for _, v := range testset {
 		if got := NaturalLess(v.s1, v.s2); got != v.less {
