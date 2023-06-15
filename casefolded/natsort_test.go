@@ -94,6 +94,9 @@ func TestNaturalLess(t *testing.T) {
 		// Kelvin sign followed by numeric comparison
 		{"\u212alm2", "Klm10", true},
 		{"Klm01", "\u212alm2", true},
+		// Special characters
+		{"!", "1", true},
+		{"!", "\u212alm2", true},
 	}
 	for _, v := range testset {
 		if got := NaturalLess(v.s1, v.s2); got != v.less {
