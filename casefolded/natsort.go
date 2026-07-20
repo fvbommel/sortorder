@@ -73,7 +73,12 @@ func NaturalLess(str1, str2 string) bool {
 
 		dig1, dig2 := isDigit(c1), isDigit(c2)
 		switch {
-		case dig1 != dig2: // Digits before other characters.
+		case dig1 != dig2:
+			// The first difference is that one is a digit and the other is not.
+			// That means that one (possibly empty) non-digit string has ended, and the other has not.
+			// The one that has ended is ordered before the one that continues,
+			// for example: "ab1" < "abc1" after skipping the matching "ab" prefix.
+			// This means the side with the digit is ordered before the other one.
 			return dig1 // True if LHS is a digit, false if the RHS is one.
 		case !dig1: // && !dig2, because dig1 == dig2
 			// For ASCII it suffices to normalize letters to upper-case,
@@ -132,7 +137,12 @@ hasUnicode:
 
 		dig1, dig2 := isDigit(c1), isDigit(c2)
 		switch {
-		case dig1 != dig2: // Digits before other characters.
+		case dig1 != dig2:
+			// The first difference is that one is a digit and the other is not.
+			// That means that one (possibly empty) non-digit string has ended, and the other has not.
+			// The one that has ended is ordered before the one that continues,
+			// for example: "ab1" < "abc1" after skipping the matching "ab" prefix.
+			// This means the side with the digit is ordered before the other one.
 			return dig1 // True if LHS is a digit, false if the RHS is one.
 		case !dig1: // && !dig2, because dig1 == dig2
 			idx1 += delta1
