@@ -3,6 +3,7 @@ package sortorder
 import (
 	"math/rand"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"testing"
@@ -22,6 +23,47 @@ func TestStringSort(t *testing.T) {
 	sort.Sort(Natural(got))
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("Error: sort failed, expected: %#q, got: %#q", want, got)
+	}
+}
+
+// TestNaturalCompare verifies the three-way comparison contract.
+func TestNaturalCompare(t *testing.T) {
+	tests := []struct {
+		name string
+		a    string
+		b    string
+		want int
+	}{
+		{name: "less", a: "a2", b: "a10", want: -1},
+		{name: "greater", a: "a10", b: "a2", want: 1},
+		{name: "equal", a: "a2", b: "a2", want: 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := NaturalCompare(tc.a, tc.b)
+			switch {
+			case tc.want < 0 && got >= 0:
+				t.Fatalf("NaturalCompare(%q, %q) = %d; want < 0", tc.a, tc.b, got)
+			case tc.want > 0 && got <= 0:
+				t.Fatalf("NaturalCompare(%q, %q) = %d; want > 0", tc.a, tc.b, got)
+			case tc.want == 0 && got != 0:
+				t.Fatalf("NaturalCompare(%q, %q) = %d; want 0", tc.a, tc.b, got)
+			}
+		})
+	}
+}
+
+// TestNaturalCompareSlices verifies that NaturalCompare can be used with
+// slices.SortFunc.
+func TestNaturalCompareSlices(t *testing.T) {
+	got := []string{"a10", "a1", "a2"}
+
+	slices.SortFunc(got, NaturalCompare)
+
+	want := []string{"a1", "a2", "a10"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("slices.SortFunc() = %q; want %q", got, want)
 	}
 }
 

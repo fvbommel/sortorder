@@ -3,6 +3,7 @@ package casefolded
 import (
 	"math/rand"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,6 +48,47 @@ func TestStringSortUnicode(t *testing.T) {
 	sort.Sort(Natural(got))
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("Error: sort failed, expected: %#q, got: %#q", want, got)
+	}
+}
+
+// TestNaturalCompare verifies the three-way comparison contract.
+func TestNaturalCompare(t *testing.T) {
+	tests := []struct {
+		name   string
+		s1, s2 string
+		want   int
+	}{
+		{name: "less", s1: "abc2", s2: "ABC12", want: -1},
+		{name: "greater", s1: "ABC12", s2: "abc2", want: 1},
+		{name: "equal", s1: "abc2", s2: "ABC2"},
+		{name: "case-folded equal", s1: "k", s2: "\u212a"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := NaturalCompare(tc.s1, tc.s2)
+			switch {
+			case tc.want < 0 && got >= 0:
+				t.Fatalf("NaturalCompare(%q, %q) = %d; want < 0", tc.s1, tc.s2, got)
+			case tc.want > 0 && got <= 0:
+				t.Fatalf("NaturalCompare(%q, %q) = %d; want > 0", tc.s1, tc.s2, got)
+			case tc.want == 0 && got != 0:
+				t.Fatalf("NaturalCompare(%q, %q) = %d; want 0", tc.s1, tc.s2, got)
+			}
+		})
+	}
+}
+
+// TestNaturalCompareSlices verifies that NaturalCompare can be used with
+// slices.SortFunc.
+func TestNaturalCompareSlices(t *testing.T) {
+	got := []string{"ABC12", "abc100", "abc2"}
+
+	slices.SortFunc(got, NaturalCompare)
+
+	want := []string{"abc2", "ABC12", "abc100"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("slices.SortFunc() = %q; want %q", got, want)
 	}
 }
 
