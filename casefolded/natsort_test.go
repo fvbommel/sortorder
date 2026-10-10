@@ -351,15 +351,21 @@ func (g *generator) NextString() (str string) {
 	return str
 }
 
+// TestNaturalCompareUnicodeNumberTiebreak checks that case-insensitively
+// equal prefix strings of different lengths don't confuse the comparison.
 func TestNaturalCompareUnicodeNumberTiebreak(t *testing.T) {
 	for _, prefixes := range [][2]string{{"k", "K"}, {"s", "ſ"}, {"å", "Å"}} {
 		for _, tc := range []struct {
 			left, right string
 			want        int
 		}{
-			{"1", "1", 0}, {"01", "01", 0}, {"0", "0", 0},
-			{"1", "01", -1}, {"01", "1", 1}, {"00", "0", 1},
-			{"1a", "1b", -1}, {"1b", "1a", 1}, {"1a2", "1a02", -1},
+			{"0", "0", 0},
+			{"1", "1", 0},
+			{"01", "01", 0},
+			{"1", "01", -1},
+			{"00", "0", 1},
+			{"1a", "1b", -1},
+			{"1a2", "1a02", -1},
 		} {
 			a, b := prefixes[0]+tc.left, prefixes[1]+tc.right
 			if got := NaturalCompare(a, b); got != tc.want {
@@ -370,6 +376,9 @@ func TestNaturalCompareUnicodeNumberTiebreak(t *testing.T) {
 			}
 			if got := NaturalLess(a, b); got != (tc.want < 0) {
 				t.Errorf("NaturalLess(%q, %q) = %v", a, b, got)
+			}
+			if got := NaturalLess(b, a); got != (tc.want > 0) {
+				t.Errorf("NaturalLess(%q, %q) = %v", b, a, got)
 			}
 		}
 	}
