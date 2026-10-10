@@ -186,6 +186,9 @@ hasUnicode:
 			}
 			return cmp.Compare(c1, c2)
 		default: // Digits
+			// Count zeros relative to each numeric run: case-equivalent
+			// prefixes can have different UTF-8 byte lengths.
+			start1, start2 := idx1, idx2
 			// Eat zeros.
 			for ; idx1 < len(str1) && str1[idx1] == '0'; idx1++ {
 			}
@@ -207,10 +210,8 @@ hasUnicode:
 				return cmp.Compare(nr1, nr2)
 			}
 			// Otherwise, the one with less zeros is less.
-			// Because everything up to the number is equal, comparing the index
-			// after the zeros is sufficient.
-			if nonZero1 != nonZero2 {
-				return cmp.Compare(nonZero1, nonZero2)
+			if zeros1, zeros2 := nonZero1-start1, nonZero2-start2; zeros1 != zeros2 {
+				return cmp.Compare(zeros1, zeros2)
 			}
 		}
 		// They're identical so far, so continue comparing.
